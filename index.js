@@ -10,7 +10,7 @@ const matchImport = /^([\w-]+)(?:\s+as\s+([\w-]+))?/;
 
 const walkerPlugin = postcss.plugin('postcss-modules-values-replace-identity', fn => fn);
 
-module.exports = postcss.plugin('postcss-modules-values-replace', ({ fs = nodeFs } = {}) =>
+module.exports = postcss.plugin('postcss-modules-values-replace', ({ fs = nodeFs } = {}) => (
   function (root, result) {
     const walkFile = (file, requiredDefinitions) => new Promise((resolve, reject) => {
       fs.readFile(file, (err, content) => {
@@ -100,5 +100,5 @@ module.exports = postcss.plugin('postcss-modules-values-replace', ({ fs = nodeFs
     return getWalker().walk(root, result).then((definitions) => {
       replaceSymbols(root, definitions);
     });
-  },
-);
+  }
+));
