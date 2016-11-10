@@ -29,9 +29,7 @@ module.exports = postcss.plugin('postcss-modules-values-replace', ({ fs = nodeFs
     const getWalker = (requiredDefinitions) => {
       const definitions = {};
       const imports = {};
-      // console.log('get walker', requiredDefinitions);
       function walk(fromRoot, result) {
-        // console.log(fromRoot, result);
         fromRoot.walkAtRules('value', (atRule) => {
           const matches = matchImports.exec(atRule.params);
           if (matches) {
@@ -51,7 +49,6 @@ module.exports = postcss.plugin('postcss-modules-values-replace', ({ fs = nodeFs
         }
 
         return Promise.all(files.map(file => walkFile(file, imports[file]))).then((filesDefinitions) => {
-          // console.log('Imports',imports, requiredDefinitions);
           Object.assign(definitions, ...filesDefinitions);
           return definitions;
         });
@@ -101,7 +98,6 @@ module.exports = postcss.plugin('postcss-modules-values-replace', ({ fs = nodeFs
     };
 
     return getWalker().walk(root, result).then((definitions) => {
-      console.log(definitions);
       replaceSymbols(root, definitions);
     });
   },
