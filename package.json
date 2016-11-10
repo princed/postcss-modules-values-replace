@@ -1,6 +1,6 @@
 {
   "name": "postcss-modules-values-replace",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "PostCSS plugin to work around CSS Modules values limitations",
   "keywords": [
     "postcss",
