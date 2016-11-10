@@ -1,0 +1,3 @@
+@value level2: level2-value;
+@value level2hidden: level2hidden-value;
+@value level1shadow: level1shadow-value=level2;

@@ -1,0 +1,10 @@
+.gitignore
+.editorconfig
+
+node_modules/
+npm-debug.log
+yarn.lock
+
+fixtures
+test.js
+.travis.yml

@@ -1,0 +1,3 @@
+@value level2, level1shadow from "./level2.css";
+@value level1shadow: level1shadow-value=level1;
+@value base: 10px;

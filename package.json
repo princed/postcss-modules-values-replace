@@ -1,0 +1,44 @@
+{
+  "name": "postcss-modules-values-replace",
+  "version": "0.0.1",
+  "description": "PostCSS plugin to work around CSS Modules values limitations",
+  "keywords": [
+    "postcss",
+    "css",
+    "postcss-plugin",
+    "css-modules"
+  ],
+  "author": "Eugene Datsky <eugene@datsky.ru>",
+  "license": "MIT",
+  "repository": "princed/postcss-modules-values-replace",
+  "bugs": {
+    "url": "https://github.com/princed/postcss-modules-values-replace/issues"
+  },
+  "homepage": "https://github.com/princed/postcss-modules-values-replace",
+  "dependencies": {
+    "babel-core": "^6.18.2",
+    "babel-preset-es2015": "^6.18.0",
+    "babel-preset-stage-0": "^6.16.0",
+    "icss-replace-symbols": "^1.0.2",
+    "postcss": "^5.2.5"
+  },
+  "devDependencies": {
+    "ava": "^0.16.0",
+    "babel-polyfill": "^6.16.0",
+    "eslint": "^3.9.0",
+    "eslint-config-airbnb-base": "^10.0.1",
+    "eslint-plugin-import": "^2.2.0"
+  },
+  "scripts": {
+    "test": "eslint . && ava"
+  },
+  "babel": {
+    "presets": [
+      "es2015",
+      "stage-0"
+    ]
+  },
+  "eslintConfig": {
+    "extends": "eslint-config-airbnb-base"
+  }
+}
