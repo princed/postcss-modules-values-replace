@@ -1,4 +1,4 @@
-# PostCSS Modules Values Inline Imported [![Build Status][ci-img]][ci]
+# PostCSS Modules Values Replace [![Build Status][ci-img]][ci]
 
 [PostCSS] plugin to work around CSS Modules values limitations.
 
