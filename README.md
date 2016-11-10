@@ -10,7 +10,7 @@
 [postcss-modules-values]: https://github.com/css-modules/postcss-modules-values 
 
 Replaces CSS Modules @values just as [postcss-modules-values] does, but without help of [css-loader],
-so could it used before other [PostCSS] plugins like [postcss-calc]. 
+so it could be used before other [PostCSS] plugins like [postcss-calc]. 
 
 ## Usage
 
