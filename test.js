@@ -10,7 +10,6 @@ const parserOpts = {
   to: `${__dirname}/to.css`,
 };
 
-
 function run(t, input, output, opts = {}) {
   return postcss([plugin(opts)]).process(input, parserOpts).then((result) => {
     t.is(result.css, output);
@@ -52,19 +51,28 @@ test('should replace two constants with same name within the file and the latter
   );
 });
 
-test('should replace an import and a constant with same name within the file and the latter should win', async (t) => {
+test('should replace an import', async (t) => {
   await run(
     t,
-    '@value red from "./fixtures/colors.css"; @value blue green;\n.foo { color: red; }',
-    '@value red from "./fixtures/colors.css"; @value blue green;\n.foo { color: green; }',
+    '@value red from "./fixtures/colors.css";\n.foo { color: red; }',
+    '@value red from "./fixtures/colors.css";\n.foo { color: #FF0000; }',
   );
 });
 
 test('should replace a constant and an import with same name within the file and the latter should win', async (t) => {
   await run(
     t,
-    '@value blue green; @value red from "./fixtures/colors.css";\n.foo { color: red; }',
-    '@value blue green; @value red from "./fixtures/colors.css";\n.foo { color: #FF0000; }',
+    '@value red from "./fixtures/colors.css"; @value red green; \n.foo { color: red; }',
+    '@value red from "./fixtures/colors.css"; @value red green; \n.foo { color: green; }',
+  );
+});
+
+
+test('should replace a constant and an import with same name within the file and the latter should win', async (t) => {
+  await run(
+    t,
+    '@value red green; @value red from "./fixtures/colors.css";\n.foo { color: red; }',
+    '@value red green; @value red from "./fixtures/colors.css";\n.foo { color: #FF0000; }',
   );
 });
 
@@ -75,7 +83,7 @@ test('should import and alias a constant and replace usages', async (t) => {
     '@value blue as green from "./fixtures/colors.css";\n.foo { color: #0000FF; }');
 });
 
-test('should import and alias a constant using a name from file imported file and replace usages', async (t) => {
+test('should import and alias a constant using a name from imported file and replace usages', async (t) => {
   await run(
     t,
     '@value blue as red from "./fixtures/colors.css";\n.foo { color: red; }',
@@ -123,7 +131,7 @@ test('should allow transitive values within calc', async (t) => {
   await run(
     t,
     '@value base: 10px;\n@value large: calc(base * 2);\n.a { margin: large; }',
-    '@value base: 10px;\n@value large: calc(base * 2);\n.a { margin: calc(10px * 2); }',
+    '@value base: 10px;\n@value large: calc(10px * 2);\n.a { margin: calc(10px * 2); }',
   );
 });
 
@@ -197,7 +205,7 @@ test('should not import and replace not re-exported values', async (t) => {
   );
 });
 
-test('should replace a constant and an import with same name within the file and the latter should win', async (t) => {
+test('should replace a constant and an import with same name within the file and the latter should win in the middle of dependency tree', async (t) => {
   await run(
     t,
     '@value level1shadow from "./fixtures/level1.css";\n.foo { prop: level1shadow; }',
@@ -206,10 +214,10 @@ test('should replace a constant and an import with same name within the file and
 });
 
 
-test('should allow transitive values within calc', async (t) => {
+test('should allow imported transitive values within calc', async (t) => {
   await run(
     t,
-    '@value base npm from "./fixtures/level1.css";\n@value large: calc(base * 2);\n.a { margin: large; }',
+    '@value base from "./fixtures/level1.css";\n@value large: calc(base * 2);\n.a { margin: large; }',
     '@value base from "./fixtures/level1.css";\n@value large: calc(base * 2);\n.a { margin: calc(10px * 2); }',
   );
 });
