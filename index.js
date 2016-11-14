@@ -62,7 +62,7 @@ module.exports = postcss.plugin('postcss-modules-values-replace', ({ fs = nodeFs
 
     aliases.replace(/^\(\s*([\s\S]+)\s*\)$/, '$1').split(/\s*,\s*/).forEach((alias) => {
       const tokens = matchImport.exec(alias);
-      console.log(aliases, tokens);
+
       if (tokens) {
         const [/* match*/, theirName, myName = theirName] = tokens;
         const exportsPath = path.resolve(path.dirname(importsPath), pathString.replace(/['"]/g, ''));
