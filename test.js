@@ -204,8 +204,8 @@ test('should allow values with nested parantheses', async (t) => {
 test('should import and replace values transitively', async (t) => {
   await run(
     t,
-    '@value level2 from "./fixtures/level1.css";\n.foo { prop: level2; }',
-    '@value level2 from "./fixtures/level1.css";\n.foo { prop: level2-value; }',
+    '@value level2base from "./fixtures/level1.css";\n.foo { prop: level2base; }',
+    '@value level2base from "./fixtures/level1.css";\n.foo { prop: 20px; }',
   );
 });
 
@@ -222,6 +222,14 @@ test('should replace a constant and an import with same name within the file and
     t,
     '@value level1shadow from "./fixtures/level1.css";\n.foo { prop: level1shadow; }',
     '@value level1shadow from "./fixtures/level1.css";\n.foo { prop: level1shadow-value=level1; }',
+  );
+});
+
+test('should replace a constant and an import with same name within the file and the latter should win in the middle of dependency tree', async (t) => {
+  await run(
+    t,
+    '@value level2shadow from "./fixtures/level1.css";\n.foo { prop: level2shadow; }',
+    '@value level2shadow from "./fixtures/level1.css";\n.foo { prop: level2shadow-value=level2; }',
   );
 });
 

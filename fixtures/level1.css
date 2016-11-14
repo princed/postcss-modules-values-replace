@@ -1,4 +1,5 @@
-@value level2, level2base, level1shadow from "./level2.css";
+@value level2shadow: level2shadow-value=level1;
+@value level2base, level1shadow, level2shadow from "./level2.css";
 @value level1shadow: level1shadow-value=level1;
 @value base: 10px;
 @value huge: calc(base * 4);
