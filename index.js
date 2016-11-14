@@ -5,7 +5,7 @@ const nodeFs = require('fs');
 const { replaceAll, default: replaceSymbols } = require('icss-replace-symbols');
 
 const matchImports = /^(.+?|\([\s\S]+?\))\s+from\s+("[^"]*"|'[^']*'|[\w-]+)$/;
-const matchValueDefinition = /(?:\s+|^)([\w-]+):?\s+(.+?)\s*$/g;
+const matchValueDefinition = /(?:\s+|^)([\w-]+)(:?\s+)(.+?)(\s*)$/g;
 const matchImport = /^([\w-]+)(?:\s+as\s+([\w-]+))?/;
 
 const INNER_PLUGIN = 'postcss-modules-values-replace-bind';
@@ -24,43 +24,40 @@ module.exports = postcss.plugin('postcss-modules-values-replace', ({ fs = nodeFs
         resolve(result.messages[0].value);
       });
     });
-
-    // const content = fs.readFileSync(from);
-    // // eslint-disable-next-line no-use-before-define
-    // postcss([walkerPlugin(walk, context)]).process(content, { from }).then((result) => {
-    //   resolve(result.messages[0].value);
-    // });
   });
 
-  const getDefinition = (atRule, requiredDefinitions) => {
+  const getDefinition = (atRule, existingDefinitions, requiredDefinitions) => {
     let matches;
     const definition = {};
 
     // eslint-disable-next-line no-cond-assign
     while (matches = matchValueDefinition.exec(atRule.params)) {
-      const [/* match*/, key, value] = matches;
-      // const requiredName = requiredDefinitions && requiredDefinitions[key] ? requiredDefinitions[key] : key;
+      const [/* match*/, key, middle, value, end] = matches;
       const requiredName = key;
       // Add to the definitions, knowing that values can refer to each other
-      definition[requiredName] = replaceAll(definition, value);
+      definition[requiredName] = replaceAll(existingDefinitions, value);
+      if (!requiredDefinitions) {
+        // eslint-disable-next-line no-param-reassign
+        atRule.params = key + middle + definition[requiredName] + end;
+      }
     }
 
-    return Promise.resolve(definition);
+    return definition;
   };
 
-  const getImport = ({ matches, importsPath, existingImports, requiredDefinitions }) => {
+  const getImport = ({ matches, importsPath, existingDefinitions, requiredDefinitions }) => {
     const imports = {};
     // eslint-disable-next-line prefer-const
     let [/* match*/, aliases, pathString] = matches;
 
     // We can use constants for path names
-    if (existingImports[pathString]) {
-      pathString = existingImports[pathString];
+    if (existingDefinitions[pathString]) {
+      pathString = existingDefinitions[pathString];
     }
 
     // Do nothing if path is not found
     if (!pathString.match(/"[^"]*"|'[^']*'/)) {
-      return {};
+      return null;
     }
 
     aliases.replace(/^\(\s*([\s\S]+)\s*\)$/, '$1').split(/\s*,\s*/).forEach((alias) => {
@@ -78,69 +75,66 @@ module.exports = postcss.plugin('postcss-modules-values-replace', ({ fs = nodeFs
       }
     });
 
-    const importedDefinitions = Object.keys(imports).map(file => walkFile(file, imports[file]));
-    return { imports, importedDefinitions };
+    return imports;
   };
 
   const walk = (requiredDefinitions, fromRoot, result) => {
     const importsPath = result.opts.from;
-    const definitions = [];
-    const existingImports = {};
+    const rules = [];
 
     fromRoot.walkAtRules('value', (atRule) => {
-      const matches = matchImports.exec(atRule.params);
-
-      if (matches) {
-        const { importedDefinitions, imports } = getImport({
-          matches,
-          importsPath,
-          existingImports,
-          requiredDefinitions,
-        });
-        // console.log(importedDefinitions, imports);
-        if (imports) {
-          Object.assign(existingImports, imports);
-          definitions.push(...importedDefinitions);
-        }
-      } else {
-        if (atRule.params.indexOf('@value') !== -1) {
-          result.warn(`Invalid value definition: ${atRule.params}`);
-        }
-
-        definitions.push(getDefinition(atRule, requiredDefinitions));
-      }
+      rules.push(atRule);
     });
 
-    return Promise.all(definitions).then((allDefinitions) => {
-      // console.log(allDefinitions);
-      const validDefinitions = allDefinitions.filter(definition => definition);
-
-      if (!validDefinitions.length) {
-        return {};
-      }
-
-
-      if (requiredDefinitions) {
-        const filteredDefinitions = validDefinitions
-        .filter(definition => requiredDefinitions[Object.keys(definition)[0]])
-        .map(definition => ({ [requiredDefinitions[Object.keys(definition)[0]]]: definition[Object.keys(definition)[0]] }));
-        // console.log(filteredDefinitions, requiredDefinitions, validDefinitions);
-        result.messages.push({
-          type: INNER_PLUGIN,
-          value: Object.assign({}, ...filteredDefinitions),
+    const reduceRules = (promise, atRule) => promise.then((existingDefinitions) => {
+      const matches = matchImports.exec(atRule.params);
+      if (matches) {
+        const imports = getImport({
+          matches,
+          importsPath,
+          existingDefinitions,
+          requiredDefinitions,
         });
 
-        return {};
-      }
-      // console.log(requiredDefinitions, definition)
 
-      return Object.assign(...validDefinitions);
+        const files = imports && Object.keys(imports);
+
+        if (!files || !files[0]) {
+          return {};
+        }
+
+        return walkFile(files[0], imports[files[0]])
+          .then(definitions => Object.assign(existingDefinitions, definitions));
+      }
+
+      if (atRule.params.indexOf('@value') !== -1) {
+        result.warn(`Invalid value definition: ${atRule.params}`);
+      }
+      const newDefinitions = getDefinition(atRule, existingDefinitions, requiredDefinitions);
+      return Object.assign(existingDefinitions, newDefinitions);
+    });
+
+    return rules.reduce(reduceRules, Promise.resolve({})).then((definitions) => {
+      if (requiredDefinitions) {
+        const validDefiniftions = {};
+        Object.keys(requiredDefinitions).forEach((key) => {
+          validDefiniftions[requiredDefinitions[key]] = definitions[key];
+        });
+
+        result.messages.push({
+          type: INNER_PLUGIN,
+          value: validDefiniftions,
+        });
+
+        return undefined;
+      }
+
+      return definitions;
     });
   };
 
 
   return walk(null, root, rootResult).then((definitions) => {
-    // console.log(definitions);
     replaceSymbols(root, definitions);
   });
 });

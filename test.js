@@ -83,7 +83,7 @@ test('should import and alias a constant and replace usages', async (t) => {
     '@value blue as green from "./fixtures/colors.css";\n.foo { color: #0000FF; }');
 });
 
-test('should import and alias a constant using a name from imported file and replace usages', async (t) => {
+test('should import and alias a constant (using a name from imported file) and replace usages', async (t) => {
   await run(
     t,
     '@value blue as red from "./fixtures/colors.css";\n.foo { color: red; }',
@@ -123,7 +123,7 @@ test('should allow transitive values', async (t) => {
   await run(
     t,
     '@value aaa: red;\n@value bbb: aaa;\n.a { color: bbb; }',
-    '@value aaa: red;\n@value bbb: aaa;\n.a { color: red; }',
+    '@value aaa: red;\n@value bbb: red;\n.a { color: red; }',
   );
 });
 
@@ -218,7 +218,7 @@ test('should allow imported transitive values within calc', async (t) => {
   await run(
     t,
     '@value base from "./fixtures/level1.css";\n@value large: calc(base * 2);\n.a { margin: large; }',
-    '@value base from "./fixtures/level1.css";\n@value large: calc(base * 2);\n.a { margin: calc(10px * 2); }',
+    '@value base from "./fixtures/level1.css";\n@value large: calc(10px * 2);\n.a { margin: calc(10px * 2); }',
   );
 });
 
