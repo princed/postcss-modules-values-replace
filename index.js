@@ -45,7 +45,7 @@ module.exports = postcss.plugin('postcss-modules-values-replace', ({ fs = nodeFs
     return definition;
   };
 
-  const getImport = ({ matches, importsPath, existingDefinitions, requiredDefinitions }) => {
+  const getImport = ({ matches, importsPath, existingDefinitions }) => {
     const imports = {};
     // eslint-disable-next-line prefer-const
     let [/* match*/, aliases, pathString] = matches;
@@ -67,10 +67,11 @@ module.exports = postcss.plugin('postcss-modules-values-replace', ({ fs = nodeFs
         const [/* match*/, theirName, myName = theirName] = tokens;
         const exportsPath = path.resolve(path.dirname(importsPath), pathString.replace(/['"]/g, ''));
 
-        if (!requiredDefinitions || requiredDefinitions[myName]) {
-          const importsName = imports[exportsPath] || (imports[exportsPath] = {});
-          importsName[theirName] = myName;
+        if (!imports[exportsPath]) {
+          imports[exportsPath] = {};
         }
+
+        imports[exportsPath][theirName] = myName;
       } else {
         throw new Error(`@value statement "${alias}" is invalid!`);
       }
@@ -88,7 +89,9 @@ module.exports = postcss.plugin('postcss-modules-values-replace', ({ fs = nodeFs
     });
 
     const reduceRules = (promise, atRule) => promise.then((existingDefinitions) => {
+      // console.log(existingDefinitions);
       const matches = matchImports.exec(atRule.params);
+      // console.log(matches);
       if (matches) {
         const imports = getImport({
           matches,
@@ -115,15 +118,16 @@ module.exports = postcss.plugin('postcss-modules-values-replace', ({ fs = nodeFs
     });
 
     return rules.reduce(reduceRules, Promise.resolve({})).then((definitions) => {
+      // console.log(definitions);
       if (requiredDefinitions) {
-        const validDefiniftions = {};
+        const validDefinitions = {};
         Object.keys(requiredDefinitions).forEach((key) => {
-          validDefiniftions[requiredDefinitions[key]] = definitions[key];
+          validDefinitions[requiredDefinitions[key]] = definitions[key];
         });
 
         result.messages.push({
           type: INNER_PLUGIN,
-          value: validDefiniftions,
+          value: validDefinitions,
         });
 
         return undefined;

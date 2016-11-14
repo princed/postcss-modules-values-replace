@@ -225,12 +225,27 @@ test('should replace a constant and an import with same name within the file and
   );
 });
 
-
 test('should allow imported transitive values within calc', async (t) => {
   await run(
     t,
     '@value base from "./fixtures/level1.css";\n@value large: calc(base * 2);\n.a { margin: large; }',
     '@value base from "./fixtures/level1.css";\n@value large: calc(10px * 2);\n.a { margin: calc(10px * 2); }',
+  );
+});
+
+test('should allow import of complex transitive values with calc', async (t) => {
+  await run(
+    t,
+    '@value huge from "./fixtures/level1.css";\n.a { margin: huge; }',
+    '@value huge from "./fixtures/level1.css";\n.a { margin: calc(10px * 4); }',
+  );
+});
+
+test('should allow imported transitive values within calc', async (t) => {
+  await run(
+    t,
+    '@value enormous from "./fixtures/level1.css";\n.a { margin: enormous; }',
+    '@value enormous from "./fixtures/level1.css";\n.a { margin: calc(20px * 4); }',
   );
 });
 
