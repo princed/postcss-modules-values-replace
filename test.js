@@ -35,6 +35,18 @@ test('gives an error when there is no semicolon between lines', async (t) => {
   t.is(warnings[0].text, 'Invalid value definition: red blue\n@value green yellow');
 });
 
+test('gives an error when path to imported file is wrong', async (t) => {
+  const input = '@value red from "./non-existent-file.css"';
+  const processor = postcss([plugin]);
+  t.throws(processor.process(input, parserOpts));
+});
+
+test('gives an error when @value statement is invalid', async (t) => {
+  const input = '@value , from "./fixtures/colors.css"';
+  const processor = postcss([plugin]);
+  t.throws(processor.process(input, parserOpts));
+});
+
 test('should replace constants within the file', async (t) => {
   await run(
     t,
