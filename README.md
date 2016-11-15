@@ -33,6 +33,10 @@ To make it faster in webpack pass its file system to plugin:
 
 See [PostCSS] docs for examples for your environment.
 
+## Environment
+
+Node.js 6.5 or above is recomended.
+
 ## License
 
 ISC
