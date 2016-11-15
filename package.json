@@ -8,6 +8,9 @@
     "postcss-plugin",
     "css-modules"
   ],
+  "files": [
+    "index.js"
+  ],
   "author": "Eugene Datsky <eugene@datsky.ru>",
   "license": "ISC",
   "repository": "princed/postcss-modules-values-replace",
