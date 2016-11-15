@@ -89,9 +89,7 @@ module.exports = postcss.plugin('postcss-modules-values-replace', ({ fs = nodeFs
     });
 
     const reduceRules = (promise, atRule) => promise.then((existingDefinitions) => {
-      // console.log(existingDefinitions);
       const matches = matchImports.exec(atRule.params);
-      // console.log(matches);
       if (matches) {
         const imports = getImport({
           matches,
@@ -118,7 +116,6 @@ module.exports = postcss.plugin('postcss-modules-values-replace', ({ fs = nodeFs
     });
 
     return rules.reduce(reduceRules, Promise.resolve({})).then((definitions) => {
-      // console.log(definitions);
       if (requiredDefinitions) {
         const validDefinitions = {};
         Object.keys(requiredDefinitions).forEach((key) => {
