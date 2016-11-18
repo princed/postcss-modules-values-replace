@@ -45,7 +45,7 @@ yields `my-components.css`:
  }
  ```
  
-and exports following values to JS:
+and leads to export of following values to JS:
 
 ```js
 {
@@ -56,6 +56,7 @@ and exports following values to JS:
 }
 ```
 
+See how to export computed values in usage with `calc` example [below](#calc-and-value).
 
 ## Usage
 
@@ -94,6 +95,48 @@ postcss([
   require('postcss-modules-values-replace'),
   require('postcss-cssnext')({features: {calc: {mediaQueries: true}}})
 ])
+```
+
+Example with `calc` enabled:
+
+```css
+/* constants.css */
+@value unit: 8px;
+@value footer-height: calc(unit * 5); 
+
+/* my-components.css */
+@value unit, footer-height from "./constants.css";
+@value component-height: calc(unit * 10);
+
+.my-component {
+  padding: unit;
+  margin-top: footer-height;
+  height: component-height;
+}
+```
+
+yields `my-components.css`:
+ 
+```css
+ @value unit, footer-height from "./constants.css";
+ @value component-height: 80px;
+ 
+ .my-component {
+   padding: 8px;
+   margin-top: 40px;
+   height: 80px;
+ }
+ ```
+ 
+and leads to export of following values to JS:
+
+```js
+{
+    "unit": "8px",
+    "footer-height": "40px",  
+    "component-height": "80px",
+    ...    
+}
 ```
   
 ### Other computations and @value 
