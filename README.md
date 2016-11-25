@@ -75,6 +75,17 @@ To make it faster in webpack pass its file system to plugin:
 }
 ```
 
+Or in `postcss.config.js` form: 
+
+```js
+module.exports = (ctx) => ({
+   plugins: [
+     require('postcss-modules-values-replace')({fs: ctx.webpack._compiler.inputFileSystem}),
+     require('postcss-color-function'),
+  ]
+});
+```
+
 See [PostCSS] docs for examples for your environment.
 
 ### calc() and @value 
