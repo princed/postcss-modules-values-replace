@@ -41,9 +41,6 @@
     "prepublish": "npm run lint && npm run build",
     "test": "npm run lint && ava"
   },
-  "engines": {
-    "node": ">=6.5"
-  },
   "babel": {
     "presets": [
       "es2015",
