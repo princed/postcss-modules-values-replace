@@ -136,6 +136,10 @@ module.exports = postcss.plugin('postcss-modules-values-replace', ({ fs = nodeFs
 
 
   return walk(null, root, rootResult).then((definitions) => {
+    rootResult.messages.push({
+      type: INNER_PLUGIN,
+      value: definitions,
+    });
     replaceSymbols(root, definitions);
   });
 });
