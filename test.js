@@ -257,3 +257,11 @@ test('should allow imported transitive values within calc', async (t) => {
   );
 });
 
+test('variables are also present in messages', async (t) => {
+  const input = '@value myColor: blue; @value myColor2: myColor';
+  const processor = postcss([plugin]);
+  const result = await processor.process(input);
+  const variables = result.messages[0].value;
+
+  t.is(variables.myColor2, 'blue');
+});
