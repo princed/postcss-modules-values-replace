@@ -261,7 +261,9 @@ test('variables are also present in messages', async (t) => {
   const input = '@value myColor: blue; @value myColor2: myColor';
   const processor = postcss([plugin]);
   const result = await processor.process(input);
-  const variables = result.messages[0].value;
+  const values = result.messages[0].values;
+  const type = result.messages[0].type;
 
-  t.is(variables.myColor2, 'blue');
+  t.is(type, 'values');
+  t.is(values.myColor2, 'blue');
 });
