@@ -7,6 +7,7 @@ import replaceSymbols, { replaceAll } from 'icss-replace-symbols';
 const matchImports = /^(.+?|\([\s\S]+?\))\s+from\s+("[^"]*"|'[^']*'|[\w-]+)$/;
 const matchValueDefinition = /(?:\s+|^)([\w-]+)(:?\s+)(.+?)(\s*)$/g;
 const matchImport = /^([\w-]+)(?:\s+as\s+([\w-]+))?/;
+const matchPath = /"[^"]*"|'[^']*'/;
 
 const PLUGIN = 'postcss-modules-values-replace';
 const INNER_PLUGIN = 'postcss-modules-values-replace-bind';
@@ -21,46 +22,28 @@ const getDefinition = (atRule, existingDefinitions, requiredDefinitions) => {
 
   // eslint-disable-next-line no-cond-assign
   while (matches = matchValueDefinition.exec(atRule.params)) {
-    const [/* match*/, key, middle, value, end] = matches;
-    const requiredName = key;
+    const [/* match*/, requiredName, middle, value, end] = matches;
     // Add to the definitions, knowing that values can refer to each other
     definition[requiredName] = replaceAll(existingDefinitions, value);
+
     if (!requiredDefinitions) {
       // eslint-disable-next-line no-param-reassign
-      atRule.params = key + middle + definition[requiredName] + end;
+      atRule.params = requiredName + middle + definition[requiredName] + end;
     }
   }
 
   return definition;
 };
 
-const getImport = (matches, existingDefinitions) => {
+const getImports = (aliases) => {
   const imports = {};
-  // eslint-disable-next-line prefer-const
-  let [/* match*/, aliases, pathString] = matches;
-
-  // We can use constants for path names
-  if (existingDefinitions[pathString]) {
-    pathString = existingDefinitions[pathString];
-  }
-
-  // Do nothing if path is not found
-  if (!pathString.match(/"[^"]*"|'[^']*'/)) {
-    return null;
-  }
 
   aliases.replace(/^\(\s*([\s\S]+)\s*\)$/, '$1').split(/\s*,\s*/).forEach((alias) => {
     const tokens = matchImport.exec(alias);
 
     if (tokens) {
       const [/* match*/, theirName, myName = theirName] = tokens;
-      const exportsPath = pathString.replace(/['"]/g, '');
-
-      if (!imports[exportsPath]) {
-        imports[exportsPath] = {};
-      }
-
-      imports[exportsPath][theirName] = myName;
+      imports[theirName] = myName;
     } else {
       throw new Error(`@value statement "${alias}" is invalid!`);
     }
@@ -82,23 +65,31 @@ const walk = async (requiredDefinitions, walkFile, root, result) => {
     const matches = matchImports.exec(atRule.params);
 
     if (matches) {
-      const imports = getImport(matches, existingDefinitions);
-      const files = imports && Object.keys(imports);
+      // eslint-disable-next-line prefer-const
+      let [/* match*/, aliases, pathString] = matches;
 
-      if (!files || !files[0]) {
+      // We can use constants for path names
+      if (existingDefinitions[pathString]) {
+        pathString = existingDefinitions[pathString];
+      }
+
+      // Do nothing if path is not found
+      if (!pathString.match(matchPath)) {
         return {};
       }
 
+      const exportsPath = pathString.replace(/['"]/g, '');
+      const imports = getImports(aliases);
 
-      const definitions = await walkFile(files[0], fromDir, imports[files[0]]);
+      const definitions = await walkFile(exportsPath, fromDir, imports);
       return Object.assign(existingDefinitions, definitions);
     }
 
     if (atRule.params.indexOf('@value') !== -1) {
       result.warn(`Invalid value definition: ${atRule.params}`);
     }
-    const newDefinitions = getDefinition(atRule, existingDefinitions, requiredDefinitions);
 
+    const newDefinitions = getDefinition(atRule, existingDefinitions, requiredDefinitions);
     return Object.assign(existingDefinitions, newDefinitions);
   };
 
