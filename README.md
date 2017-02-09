@@ -10,7 +10,8 @@
 [postcss-cssnext]: https://github.com/MoOx/postcss-cssnext
 [postcss-color-function]: https://github.com/postcss/postcss-color-function
 [postcss-modules-values]: https://github.com/css-modules/postcss-modules-values
-
+[modules-values-extract]: https://github.com/alexhisen/modules-values-extract
+[enhanced-resolve]: https://github.com/webpack/enhanced-resolve/#contributing
 Replaces CSS Modules @values just as [postcss-modules-values] does, but without help of [css-loader],
 so it could be used before other [PostCSS] plugins like [postcss-calc].
 
@@ -65,17 +66,7 @@ Place it before other plugins:
 postcss([ require('postcss-modules-values-replace'), require('postcss-calc') ]);
 ```
 
-To make it faster in webpack pass its file system to plugin:
-```js
-{
-  postcss: webpack => [
-    require('postcss-modules-values-replace')({fs: webpack._compiler.inputFileSystem}),
-    require('postcss-calc')
-  ]
-}
-```
-
-Or in `postcss.config.js` form:
+When using from webpack, pass its file system in `postcss.config.js` form:
 
 ```js
 module.exports = (ctx) => ({
@@ -85,8 +76,18 @@ module.exports = (ctx) => ({
   ]
 });
 ```
+See [PostCSS] docs for other examples for your environment.
 
-See [PostCSS] docs for examples for your environment.
+### Configuration params
+
+#### fs `Object` 
+
+File system to use. To make it faster in webpack pass its file system to plugin.
+Cached Node's file system is used by default. 
+
+#### resolve `Object`
+
+[enhanced-resolve]'s configuration object, see there for possible options and defaults.  
 
 ### calc() and @value
 
@@ -158,7 +159,7 @@ and leads to export of following values to JS:
 This plugin provides to postcss a custom [messages](http://api.postcss.org/Result.html#messages) object with `type: 'values'`.
 The `values` property of that object will contain all the extracted values with all substitution performed (i.e. for values that reference other values).
 
-See [modules-values-extract](https://github.com/alexhisen/modules-values-extract) for an example of how this can be used.
+See [modules-values-extract] for an example of how this can be used.
 
 ## Environment
 
