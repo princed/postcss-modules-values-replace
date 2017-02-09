@@ -3,11 +3,11 @@
 module.exports = wallaby => ({
   files: [
     'index.js',
+    { pattern: 'fixtures/**', load: false, instrument: false },
   ],
 
   tests: [
     'test.js',
-    { pattern: 'fixtures/*.css', load: false },
   ],
 
   env: {

@@ -1,8 +1,8 @@
-const postcss = require('postcss');
-const path = require('path');
-const nodeFs = require('fs');
-
-const { replaceAll, default: replaceSymbols } = require('icss-replace-symbols');
+import postcss from 'postcss';
+import path from 'path';
+import promisify from 'es6-promisify';
+import { CachedInputFileSystem, NodeJsInputFileSystem, ResolverFactory } from 'enhanced-resolve';
+import replaceSymbols, { replaceAll } from 'icss-replace-symbols';
 
 const matchImports = /^(.+?|\([\s\S]+?\))\s+from\s+("[^"]*"|'[^']*'|[\w-]+)$/;
 const matchValueDefinition = /(?:\s+|^)([\w-]+)(:?\s+)(.+?)(\s*)$/g;
@@ -12,20 +12,24 @@ const PLUGIN = 'postcss-modules-values-replace';
 const INNER_PLUGIN = 'postcss-modules-values-replace-bind';
 const walkerPlugin = postcss.plugin(INNER_PLUGIN, (fn, context) => fn.bind(null, context));
 
-module.exports = postcss.plugin(PLUGIN, ({ fs = nodeFs } = {}) => (root, rootResult) => {
-  const walkFile = (from, context) => new Promise((resolve, reject) => {
-    fs.readFile(from, (err, content) => {
-      if (err) {
-        reject(err);
-        return;
-      }
+// Borrowed from enhanced-resolve
+const nodeFs = new CachedInputFileSystem(new NodeJsInputFileSystem(), 4000);
+const concordContext = {};
 
-      // eslint-disable-next-line no-use-before-define
-      postcss([walkerPlugin(walk, context)]).process(content, { from }).then((result) => {
-        resolve(result.messages[0].value);
-      });
-    });
-  });
+const factory = ({ fs = nodeFs, resolve: options = {} } = {}) => async (root, rootResult) => {
+  const resolver = ResolverFactory.createResolver(Object.assign({ fileSystem: fs }, options));
+  const resolve = promisify(resolver.resolve, resolver);
+  const readFile = promisify(fs.readFile, fs);
+
+  async function walkFile(from, dir, context) {
+    const resolvedFrom = await resolve(concordContext, dir, from);
+    const content = await readFile(resolvedFrom);
+    // eslint-disable-next-line no-use-before-define
+    const result = await postcss([walkerPlugin(walk, context)])
+      .process(content, { from: resolvedFrom });
+
+    return result.messages[0].value;
+  }
 
   const getDefinition = (atRule, existingDefinitions, requiredDefinitions) => {
     let matches;
@@ -46,7 +50,7 @@ module.exports = postcss.plugin(PLUGIN, ({ fs = nodeFs } = {}) => (root, rootRes
     return definition;
   };
 
-  const getImport = ({ matches, importsPath, existingDefinitions }) => {
+  const getImport = (matches, existingDefinitions) => {
     const imports = {};
     // eslint-disable-next-line prefer-const
     let [/* match*/, aliases, pathString] = matches;
@@ -66,7 +70,7 @@ module.exports = postcss.plugin(PLUGIN, ({ fs = nodeFs } = {}) => (root, rootRes
 
       if (tokens) {
         const [/* match*/, theirName, myName = theirName] = tokens;
-        const exportsPath = path.resolve(path.dirname(importsPath), pathString.replace(/['"]/g, ''));
+        const exportsPath = pathString.replace(/['"]/g, '');
 
         if (!imports[exportsPath]) {
           imports[exportsPath] = {};
@@ -81,67 +85,66 @@ module.exports = postcss.plugin(PLUGIN, ({ fs = nodeFs } = {}) => (root, rootRes
     return imports;
   };
 
-  const walk = (requiredDefinitions, fromRoot, result) => {
-    const importsPath = result.opts.from;
+  const walk = async (requiredDefinitions, fromRoot, result) => {
     const rules = [];
+    const fromDir = result.opts.from && path.dirname(result.opts.from);
 
     fromRoot.walkAtRules('value', (atRule) => {
       rules.push(atRule);
     });
 
-    const reduceRules = (promise, atRule) => promise.then((existingDefinitions) => {
+    const reduceRules = async (definitionsPromise, atRule) => {
+      const existingDefinitions = await definitionsPromise;
       const matches = matchImports.exec(atRule.params);
-      if (matches) {
-        const imports = getImport({
-          matches,
-          importsPath,
-          existingDefinitions,
-          requiredDefinitions,
-        });
 
+      if (matches) {
+        const imports = getImport(matches, existingDefinitions);
         const files = imports && Object.keys(imports);
 
         if (!files || !files[0]) {
           return {};
         }
 
-        return walkFile(files[0], imports[files[0]])
-          .then(definitions => Object.assign(existingDefinitions, definitions));
+
+        const definitions = await walkFile(files[0], fromDir, imports[files[0]]);
+        return Object.assign(existingDefinitions, definitions);
       }
 
       if (atRule.params.indexOf('@value') !== -1) {
         result.warn(`Invalid value definition: ${atRule.params}`);
       }
       const newDefinitions = getDefinition(atRule, existingDefinitions, requiredDefinitions);
+
       return Object.assign(existingDefinitions, newDefinitions);
-    });
+    };
 
-    return rules.reduce(reduceRules, Promise.resolve({})).then((definitions) => {
-      if (requiredDefinitions) {
-        const validDefinitions = {};
-        Object.keys(requiredDefinitions).forEach((key) => {
-          validDefinitions[requiredDefinitions[key]] = definitions[key];
-        });
+    const definitions = await rules.reduce(reduceRules, Promise.resolve({}));
 
-        result.messages.push({
-          type: INNER_PLUGIN,
-          value: validDefinitions,
-        });
+    if (requiredDefinitions) {
+      const validDefinitions = {};
+      Object.keys(requiredDefinitions).forEach((key) => {
+        validDefinitions[requiredDefinitions[key]] = definitions[key];
+      });
 
-        return undefined;
-      }
+      result.messages.push({
+        type: INNER_PLUGIN,
+        value: validDefinitions,
+      });
 
-      return definitions;
-    });
+      return undefined;
+    }
+
+    return definitions;
   };
 
 
-  return walk(null, root, rootResult).then((definitions) => {
-    rootResult.messages.push({
-      plugin: PLUGIN,
-      type: 'values',
-      values: definitions,
-    });
-    replaceSymbols(root, definitions);
+  const definitions = await walk(null, root, rootResult);
+  rootResult.messages.push({
+    plugin: PLUGIN,
+    type: 'values',
+    values: definitions,
   });
-});
+  replaceSymbols(root, definitions);
+};
+
+export default postcss.plugin(PLUGIN, factory);

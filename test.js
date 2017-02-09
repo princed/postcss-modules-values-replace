@@ -2,12 +2,13 @@
 
 import postcss from 'postcss';
 import test from 'ava';
+import { resolve } from 'path';
 
-import plugin from './';
+import plugin from './index';
 
 const parserOpts = {
-  from: `${__dirname}/from.css`,
-  to: `${__dirname}/to.css`,
+  from: resolve(__dirname, 'fixtures/from.css'),
+  to: resolve(__dirname, 'fixtures/to.css'),
 };
 
 function run(t, input, output, opts = {}) {
@@ -42,7 +43,7 @@ test('gives an error when path to imported file is wrong', async (t) => {
 });
 
 test('gives an error when @value statement is invalid', async (t) => {
-  const input = '@value , from "./fixtures/colors.css"';
+  const input = '@value , from "./colors.css"';
   const processor = postcss([plugin]);
   t.throws(processor.process(input, parserOpts));
 });
@@ -66,16 +67,16 @@ test('should replace two constants with same name within the file and the latter
 test('should replace an import', async (t) => {
   await run(
     t,
-    '@value red from "./fixtures/colors.css";\n.foo { color: red; }',
-    '@value red from "./fixtures/colors.css";\n.foo { color: #FF0000; }',
+    '@value red from "./colors.css";\n.foo { color: red; }',
+    '@value red from "./colors.css";\n.foo { color: #FF0000; }',
   );
 });
 
 test('should replace a constant and an import with same name within the file and the latter should win', async (t) => {
   await run(
     t,
-    '@value red from "./fixtures/colors.css"; @value red green; \n.foo { color: red; }',
-    '@value red from "./fixtures/colors.css"; @value red green; \n.foo { color: green; }',
+    '@value red from "./colors.css"; @value red green; \n.foo { color: red; }',
+    '@value red from "./colors.css"; @value red green; \n.foo { color: green; }',
   );
 });
 
@@ -83,33 +84,33 @@ test('should replace a constant and an import with same name within the file and
 test('should replace a constant and an import with same name within the file and the latter should win', async (t) => {
   await run(
     t,
-    '@value red green; @value red from "./fixtures/colors.css";\n.foo { color: red; }',
-    '@value red green; @value red from "./fixtures/colors.css";\n.foo { color: #FF0000; }',
+    '@value red green; @value red from "./colors.css";\n.foo { color: red; }',
+    '@value red green; @value red from "./colors.css";\n.foo { color: #FF0000; }',
   );
 });
 
 test('should import and alias a constant and replace usages', async (t) => {
   await run(
     t,
-    '@value blue as green from "./fixtures/colors.css";\n.foo { color: green; }',
-    '@value blue as green from "./fixtures/colors.css";\n.foo { color: #0000FF; }');
+    '@value blue as green from "./colors.css";\n.foo { color: green; }',
+    '@value blue as green from "./colors.css";\n.foo { color: #0000FF; }');
 });
 
 test('should import and alias a constant (using a name from imported file) and replace usages', async (t) => {
   await run(
     t,
-    '@value blue as red from "./fixtures/colors.css";\n.foo { color: red; }',
-    '@value blue as red from "./fixtures/colors.css";\n.foo { color: #0000FF; }',
+    '@value blue as red from "./colors.css";\n.foo { color: red; }',
+    '@value blue as red from "./colors.css";\n.foo { color: #0000FF; }',
   );
 });
 
 test('should import multiple from a single file', async (t) => {
   await run(
     t,
-    `@value blue, red from "./fixtures/colors.css";
+    `@value blue, red from "./colors.css";
 .foo { color: red; }
 .bar { color: blue }`,
-    `@value blue, red from "./fixtures/colors.css";
+    `@value blue, red from "./colors.css";
 .foo { color: #FF0000; }
 .bar { color: #0000FF }`,
   );
@@ -118,16 +119,16 @@ test('should import multiple from a single file', async (t) => {
 test('should import from a definition and replace', async (t) => {
   await run(
     t,
-    '@value colors: "./fixtures/colors.css"; @value red from colors;\n.foo { color: red; }',
-    '@value colors: "./fixtures/colors.css"; @value red from colors;\n.foo { color: #FF0000; }',
+    '@value colors: "./colors.css"; @value red from colors;\n.foo { color: red; }',
+    '@value colors: "./colors.css"; @value red from colors;\n.foo { color: #FF0000; }',
   );
 });
 
 test('should only allow values for paths if defined in the right order', async (t) => {
   await run(
     t,
-    ' @value red from colors; @value colors: "./fixtures/colors.css";\n.foo { color: red; }',
-    ' @value red from colors; @value colors: "./fixtures/colors.css";\n.foo { color: red; }',
+    ' @value red from colors; @value colors: "./colors.css";\n.foo { color: red; }',
+    ' @value red from colors; @value colors: "./colors.css";\n.foo { color: red; }',
   );
 });
 
@@ -150,8 +151,8 @@ test('should allow transitive values within calc', async (t) => {
 test('should allow custom-property-style names', async (t) => {
   await run(
     t,
-    '@value --red from "./fixtures/colors.css";\n.foo { color: --red; }',
-    '@value --red from "./fixtures/colors.css";\n.foo { color: #FF0000; }',
+    '@value --red from "./colors.css";\n.foo { color: --red; }',
+    '@value --red from "./colors.css";\n.foo { color: #FF0000; }',
   );
 });
 
@@ -171,13 +172,13 @@ test('should import multiple from a single file on multiple lines', async (t) =>
     `@value (
   blue,
   red
-) from "./fixtures/colors.css";
+) from "./colors.css";
 .foo { color: red; }
 .bar { color: blue }`,
     `@value (
   blue,
   red
-) from "./fixtures/colors.css";
+) from "./colors.css";
 .foo { color: #FF0000; }
 .bar { color: #0000FF }`,
   );
@@ -204,56 +205,80 @@ test('should allow values with nested parantheses', async (t) => {
 test('should import and replace values transitively', async (t) => {
   await run(
     t,
-    '@value level2base from "./fixtures/level1.css";\n.foo { prop: level2base; }',
-    '@value level2base from "./fixtures/level1.css";\n.foo { prop: 20px; }',
+    '@value level2base from "./level1.css";\n.foo { prop: level2base; }',
+    '@value level2base from "./level1.css";\n.foo { prop: 20px; }',
   );
 });
 
 test('should not import and replace not re-exported values', async (t) => {
   await run(
     t,
-    '@value level2hidden from "./fixtures/level1.css";\n.foo { prop: level2hidden; }',
-    '@value level2hidden from "./fixtures/level1.css";\n.foo { prop: level2hidden; }',
+    '@value level2hidden from "./level1.css";\n.foo { prop: level2hidden; }',
+    '@value level2hidden from "./level1.css";\n.foo { prop: level2hidden; }',
   );
 });
 
 test('should replace a constant and an import with same name within the file and the latter should win in the middle of dependency tree', async (t) => {
   await run(
     t,
-    '@value level1shadow from "./fixtures/level1.css";\n.foo { prop: level1shadow; }',
-    '@value level1shadow from "./fixtures/level1.css";\n.foo { prop: level1shadow-value=level1; }',
+    '@value level1shadow from "./level1.css";\n.foo { prop: level1shadow; }',
+    '@value level1shadow from "./level1.css";\n.foo { prop: level1shadow-value=level1; }',
   );
 });
 
 test('should replace a constant and an import with same name within the file and the latter should win in the middle of dependency tree', async (t) => {
   await run(
     t,
-    '@value level2shadow from "./fixtures/level1.css";\n.foo { prop: level2shadow; }',
-    '@value level2shadow from "./fixtures/level1.css";\n.foo { prop: level2shadow-value=level2; }',
+    '@value level2shadow from "./level1.css";\n.foo { prop: level2shadow; }',
+    '@value level2shadow from "./level1.css";\n.foo { prop: level2shadow-value=level2; }',
   );
 });
 
 test('should allow imported transitive values within calc', async (t) => {
   await run(
     t,
-    '@value base from "./fixtures/level1.css";\n@value large: calc(base * 2);\n.a { margin: large; }',
-    '@value base from "./fixtures/level1.css";\n@value large: calc(10px * 2);\n.a { margin: calc(10px * 2); }',
+    '@value base from "./level1.css";\n@value large: calc(base * 2);\n.a { margin: large; }',
+    '@value base from "./level1.css";\n@value large: calc(10px * 2);\n.a { margin: calc(10px * 2); }',
   );
 });
 
 test('should allow import of complex transitive values with calc', async (t) => {
   await run(
     t,
-    '@value huge from "./fixtures/level1.css";\n.a { margin: huge; }',
-    '@value huge from "./fixtures/level1.css";\n.a { margin: calc(10px * 4); }',
+    '@value huge from "./level1.css";\n.a { margin: huge; }',
+    '@value huge from "./level1.css";\n.a { margin: calc(10px * 4); }',
   );
 });
 
 test('should allow imported transitive values within calc', async (t) => {
   await run(
     t,
-    '@value enormous from "./fixtures/level1.css";\n.a { margin: enormous; }',
-    '@value enormous from "./fixtures/level1.css";\n.a { margin: calc(20px * 4); }',
+    '@value enormous from "./level1.css";\n.a { margin: enormous; }',
+    '@value enormous from "./level1.css";\n.a { margin: calc(20px * 4); }',
+  );
+});
+
+test('should replace an import from modules', async (t) => {
+  await run(
+    t,
+    '@value module from "module/module.css";\n.a { color: module; }',
+    '@value module from "module/module.css";\n.a { color: black; }',
+  );
+});
+
+test('should replace an import from main file of module', async (t) => {
+  await run(
+    t,
+    '@value module from "module";\n.a { color: module; }',
+    '@value module from "module";\n.a { color: black; }',
+  );
+});
+
+test('should replace an import from scoped modules', async (t) => {
+  await run(
+    t,
+    '@value scoped-module from "@scope/module/module.css";\n.a { color: scoped-module; }',
+    '@value scoped-module from "@scope/module/module.css";\n.a { color: purple; }',
   );
 });
 
