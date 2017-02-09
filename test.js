@@ -81,6 +81,24 @@ test('should replace a constant and an import with same name within the file and
 });
 
 
+test('should replace an import from several files', async (t) => {
+  await run(
+    t,
+    `@value red from "./colors.css";
+@value base from "./level1.css";
+@value level2base from "./level2.css";
+.a { margin: base; }
+.b { margin: level2base; }
+.foo { color: red; }`,
+`@value red from "./colors.css";
+@value base from "./level1.css";
+@value level2base from "./level2.css";
+.a { margin: 10px; }
+.b { margin: 20px; }
+.foo { color: #FF0000; }`,
+  );
+});
+
 test('should replace a constant and an import with same name within the file and the latter should win', async (t) => {
   await run(
     t,
