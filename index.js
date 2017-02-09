@@ -8,10 +8,11 @@ const matchImports = /^(.+?|\([\s\S]+?\))\s+from\s+("[^"]*"|'[^']*'|[\w-]+)$/;
 const matchValueDefinition = /(?:\s+|^)([\w-]+)(:?\s+)(.+?)(\s*)$/g;
 const matchImport = /^([\w-]+)(?:\s+as\s+([\w-]+))?/;
 
+const PLUGIN = 'postcss-modules-values-replace';
 const INNER_PLUGIN = 'postcss-modules-values-replace-bind';
 const walkerPlugin = postcss.plugin(INNER_PLUGIN, (fn, context) => fn.bind(null, context));
 
-module.exports = postcss.plugin('postcss-modules-values-replace', ({ fs = nodeFs } = {}) => (root, rootResult) => {
+module.exports = postcss.plugin(PLUGIN, ({ fs = nodeFs } = {}) => (root, rootResult) => {
   const walkFile = (from, context) => new Promise((resolve, reject) => {
     fs.readFile(from, (err, content) => {
       if (err) {
@@ -136,6 +137,11 @@ module.exports = postcss.plugin('postcss-modules-values-replace', ({ fs = nodeFs
 
 
   return walk(null, root, rootResult).then((definitions) => {
+    rootResult.messages.push({
+      plugin: PLUGIN,
+      type: 'values',
+      values: definitions,
+    });
     replaceSymbols(root, definitions);
   });
 });
