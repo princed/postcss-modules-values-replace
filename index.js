@@ -137,4 +137,8 @@ const factory = ({ fs = nodeFs, resolve: options = {} } = {}) => async (root, ro
   replaceSymbols(root, definitions);
 };
 
-export default postcss.plugin(PLUGIN, factory);
+
+const plugin = postcss.plugin(PLUGIN, factory);
+module.exports = plugin; // support old good require
+export default plugin;
+
