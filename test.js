@@ -39,13 +39,13 @@ test('gives an error when there is no semicolon between lines', async (t) => {
 test('gives an error when path to imported file is wrong', async (t) => {
   const input = '@value red from "./non-existent-file.css"';
   const processor = postcss([plugin]);
-  t.throws(processor.process(input, parserOpts));
+  await t.throws(processor.process(input, parserOpts));
 });
 
 test('gives an error when @value statement is invalid', async (t) => {
   const input = '@value , from "./colors.css"';
   const processor = postcss([plugin]);
-  t.throws(processor.process(input, parserOpts));
+  await t.throws(processor.process(input, parserOpts));
 });
 
 test('should replace constants within the file', async (t) => {
