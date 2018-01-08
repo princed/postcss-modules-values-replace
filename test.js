@@ -1,10 +1,10 @@
 /* eslint-disable import/no-extraneous-dependencies */
 
-import postcss from 'postcss';
-import test from 'ava';
-import { resolve } from 'path';
+const postcss = require('postcss');
+const test = require('ava');
+const { resolve } = require('path');
 
-import plugin from './index';
+const plugin = require('.');
 
 const parserOpts = {
   from: resolve(__dirname, 'fixtures/from.css'),

@@ -20,9 +20,5 @@ module.exports = wallaby => ({
 
   testFramework: 'ava',
 
-  setup() {
-    require('babel-polyfill');
-  },
-
   debug: true,
 });

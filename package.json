@@ -8,10 +8,8 @@
     "postcss-plugin",
     "css-modules"
   ],
-  "main": "lib",
   "files": [
-    "index.js",
-    "lib"
+    "index.js"
   ],
   "author": "Eugene Datsky <eugene@datsky.ru>",
   "license": "ISC",
@@ -21,7 +19,6 @@
   },
   "homepage": "https://github.com/princed/postcss-modules-values-replace",
   "dependencies": {
-    "@ava/babel-preset-stage-4": "^1.0.0",
     "enhanced-resolve": "^3.1.0",
     "es6-promisify": "^5.0.0",
     "icss-utils": "^3.0.1",
@@ -29,27 +26,14 @@
   },
   "devDependencies": {
     "ava": "^0.24.0",
-    "babel-cli": "^6.18.0",
-    "babel-core": "^6.18.2",
-    "babel-polyfill": "^6.16.0",
-    "babel-register": "^6.22.0",
     "eslint": "^4.15.0",
     "eslint-config-airbnb-base": "^12.1.0",
     "eslint-plugin-import": "^2.5.0"
   },
   "scripts": {
-    "build": "babel --out-dir lib index.js",
     "lint": "eslint *.js",
-    "prepublish": "npm run lint && npm run build",
+    "prepublish": "npm test",
     "test": "npm run lint && ava"
-  },
-  "ava": {
-    "require": "babel-register"
-  },
-  "babel": {
-    "presets": [
-      "@ava/stage-4"
-    ]
   },
   "eslintConfig": {
     "extends": "eslint-config-airbnb-base"

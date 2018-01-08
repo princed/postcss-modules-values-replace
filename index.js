@@ -1,8 +1,8 @@
-import postcss from 'postcss';
-import path from 'path';
-import promisify from 'es6-promisify';
-import { CachedInputFileSystem, NodeJsInputFileSystem, ResolverFactory } from 'enhanced-resolve';
-import { replaceSymbols, replaceValueSymbols } from 'icss-utils';
+const postcss = require('postcss');
+const path = require('path');
+const promisify = require('es6-promisify');
+const { CachedInputFileSystem, NodeJsInputFileSystem, ResolverFactory } = require('enhanced-resolve');
+const { replaceSymbols, replaceValueSymbols } = require('icss-utils');
 
 const matchImports = /^(.+?|\([\s\S]+?\))\s+from\s+("[^"]*"|'[^']*'|[\w-]+)$/;
 const matchValueDefinition = /(?:\s+|^)([\w-]+)(:?\s+)(.+?)(\s*)$/g;
@@ -140,6 +140,6 @@ const factory = ({ fs = nodeFs, resolve: options = {} } = {}) => async (root, ro
 
 
 const plugin = postcss.plugin(PLUGIN, factory);
-module.exports = plugin; // support old good require
-export default plugin;
+module.exports = plugin;
+exports.default = plugin;
 
