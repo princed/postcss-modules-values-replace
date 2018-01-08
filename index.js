@@ -22,7 +22,7 @@ const getDefinition = (atRule, existingDefinitions, requiredDefinitions) => {
 
   // eslint-disable-next-line no-cond-assign
   while (matches = matchValueDefinition.exec(atRule.params)) {
-    const [/* match*/, requiredName, middle, value, end] = matches;
+    const [/* match */, requiredName, middle, value, end] = matches;
     // Add to the definitions, knowing that values can refer to each other
     definition[requiredName] = replaceAll(existingDefinitions, value);
 
@@ -42,7 +42,7 @@ const getImports = (aliases) => {
     const tokens = matchImport.exec(alias);
 
     if (tokens) {
-      const [/* match*/, theirName, myName = theirName] = tokens;
+      const [/* match */, theirName, myName = theirName] = tokens;
       imports[theirName] = myName;
     } else {
       throw new Error(`@value statement "${alias}" is invalid!`);
@@ -66,7 +66,7 @@ const walk = async (requiredDefinitions, walkFile, root, result) => {
 
     if (matches) {
       // eslint-disable-next-line prefer-const
-      let [/* match*/, aliases, pathString] = matches;
+      let [/* match */, aliases, pathString] = matches;
 
       // We can use constants for path names
       if (existingDefinitions[pathString]) {
