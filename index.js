@@ -2,7 +2,7 @@ import postcss from 'postcss';
 import path from 'path';
 import promisify from 'es6-promisify';
 import { CachedInputFileSystem, NodeJsInputFileSystem, ResolverFactory } from 'enhanced-resolve';
-import replaceSymbols, { replaceAll } from 'icss-replace-symbols';
+import { replaceSymbols, replaceValueSymbols } from 'icss-utils';
 
 const matchImports = /^(.+?|\([\s\S]+?\))\s+from\s+("[^"]*"|'[^']*'|[\w-]+)$/;
 const matchValueDefinition = /(?:\s+|^)([\w-]+)(:?\s+)(.+?)(\s*)$/g;
@@ -24,7 +24,7 @@ const getDefinition = (atRule, existingDefinitions, requiredDefinitions) => {
   while (matches = matchValueDefinition.exec(atRule.params)) {
     const [/* match */, requiredName, middle, value, end] = matches;
     // Add to the definitions, knowing that values can refer to each other
-    definition[requiredName] = replaceAll(existingDefinitions, value);
+    definition[requiredName] = replaceValueSymbols(value, existingDefinitions);
 
     if (!requiredDefinitions) {
       // eslint-disable-next-line no-param-reassign
