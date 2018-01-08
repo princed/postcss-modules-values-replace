@@ -56,6 +56,14 @@ test('should replace constants within the file', async (t) => {
   );
 });
 
+test('shouldn\'t replace selector', async (t) => {
+  await run(
+    t,
+    '@value blue red; .blue { color: blue; }',
+    '@value blue red; .blue { color: red; }',
+  );
+});
+
 test('should replace two constants with same name within the file and the latter should win', async (t) => {
   await run(
     t,

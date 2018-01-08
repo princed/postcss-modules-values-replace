@@ -2,7 +2,7 @@ const postcss = require('postcss');
 const path = require('path');
 const promisify = require('es6-promisify');
 const { CachedInputFileSystem, NodeJsInputFileSystem, ResolverFactory } = require('enhanced-resolve');
-const { replaceSymbols, replaceValueSymbols } = require('icss-utils');
+const { replaceValueSymbols } = require('icss-utils');
 
 const matchImports = /^(.+?|\([\s\S]+?\))\s+from\s+("[^"]*"|'[^']*'|[\w-]+)$/;
 const matchValueDefinition = /(?:\s+|^)([\w-]+)(:?\s+)(.+?)(\s*)$/g;
@@ -135,7 +135,13 @@ const factory = ({ fs = nodeFs, resolve: options = {} } = {}) => async (root, ro
     type: 'values',
     values: definitions,
   });
-  replaceSymbols(root, definitions);
+
+  root.walk((node) => {
+    if (node.type === 'decl') {
+      // eslint-disable-next-line no-param-reassign
+      node.value = replaceValueSymbols(node.value, definitions);
+    }
+  });
 };
 
 
