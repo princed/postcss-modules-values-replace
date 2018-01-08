@@ -90,7 +90,7 @@ test('should replace an import from several files', async (t) => {
 .a { margin: base; }
 .b { margin: level2base; }
 .foo { color: red; }`,
-`@value red from "./colors.css";
+    `@value red from "./colors.css";
 @value base from "./level1.css";
 @value level2base from "./level2.css";
 .a { margin: 10px; }
@@ -111,7 +111,8 @@ test('should import and alias a constant and replace usages', async (t) => {
   await run(
     t,
     '@value blue as green from "./colors.css";\n.foo { color: green; }',
-    '@value blue as green from "./colors.css";\n.foo { color: #0000FF; }');
+    '@value blue as green from "./colors.css";\n.foo { color: #0000FF; }',
+  );
 });
 
 test('should import and alias a constant (using a name from imported file) and replace usages', async (t) => {
@@ -304,8 +305,7 @@ test('variables are also present in messages', async (t) => {
   const input = '@value myColor: blue; @value myColor2: myColor';
   const processor = postcss([plugin]);
   const result = await processor.process(input);
-  const values = result.messages[0].values;
-  const type = result.messages[0].type;
+  const { values, type } = result.messages[0];
 
   t.is(type, 'values');
   t.is(values.myColor2, 'blue');

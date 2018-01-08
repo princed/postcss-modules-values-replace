@@ -70,6 +70,7 @@ const walk = async (requiredDefinitions, walkFile, root, result) => {
 
       // We can use constants for path names
       if (existingDefinitions[pathString]) {
+        // eslint-disable-next-line prefer-destructuring
         pathString = existingDefinitions[pathString];
       }
 
