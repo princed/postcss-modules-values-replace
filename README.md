@@ -1,7 +1,5 @@
 # PostCSS Modules Values Replace [![Build Status][ci-img]][ci]
 
-[![Greenkeeper badge](https://badges.greenkeeper.io/princed/postcss-modules-values-replace.svg)](https://greenkeeper.io/)
-
 [PostCSS] plugin to work around CSS Modules values limitations.
 
 [ci]: https://travis-ci.org/princed/postcss-modules-values-replace
