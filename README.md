@@ -72,7 +72,7 @@ When using from webpack, pass its file system in `postcss.config.js` form:
 module.exports = (ctx) => ({
    plugins: [
      require('postcss-modules-values-replace')({fs: ctx.webpack._compiler.inputFileSystem}),
-     require('postcss-color-function'),
+     require('postcss-calc'),
   ]
 });
 ```
@@ -153,7 +153,8 @@ and leads to export of following values to JS:
 
 ### Other computations and @value
 
-[postcss-color-function] and other plugins probably won't work *inside* **@value** as they don't traverse media queries.
+[postcss-calc] and [postcss-color-function] are known to work *inside* **@value** as they traverse media queries.
+Experience with other plugins may differ if they ignore media queries.  
 
 ### Extracting values for programmatic use
 This plugin provides to postcss a custom [messages](http://api.postcss.org/Result.html#messages) object with `type: 'values'`.
