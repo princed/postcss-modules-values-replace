@@ -64,6 +64,14 @@ test('shouldn\'t replace selector', async (t) => {
   );
 });
 
+test('shouldn\'t replace inside url', async (t) => {
+  await run(
+    t,
+    '@value blue red; .blue { background-image: url(blue.png); }',
+    '@value blue red; .blue { background-image: url(blue.png); }',
+  );
+});
+
 test('should replace two constants with same name within the file and the latter should win', async (t) => {
   await run(
     t,
@@ -164,6 +172,14 @@ test('should allow transitive values', async (t) => {
     t,
     '@value aaa: red;\n@value bbb: aaa;\n.a { color: bbb; }',
     '@value aaa: red;\n@value bbb: red;\n.a { color: red; }',
+  );
+});
+
+test('shouldn\'t allow transitive values in urls', async (t) => {
+  await run(
+    t,
+    '@value aaa: red;\n@value bbb: url(aaa.png); \n.a { background-image: url(aaa.png); }',
+    '@value aaa: red;\n@value bbb: url(aaa.png); \n.a { background-image: url(aaa.png); }',
   );
 });
 

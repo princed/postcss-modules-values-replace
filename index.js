@@ -2,7 +2,7 @@ const postcss = require('postcss');
 const path = require('path');
 const promisify = require('es6-promisify');
 const { CachedInputFileSystem, NodeJsInputFileSystem, ResolverFactory } = require('enhanced-resolve');
-const { replaceValueSymbols } = require('icss-utils');
+const valueParser = require('postcss-value-parser');
 
 const matchImports = /^(.+?|\([\s\S]+?\))\s+from\s+("[^"]*"|'[^']*'|[\w-]+)$/;
 const matchValueDefinition = /(?:\s+|^)([\w-]+)(:?\s+)(.+?)(\s*)$/g;
@@ -15,6 +15,23 @@ const INNER_PLUGIN = 'postcss-modules-values-replace-bind';
 // Borrowed from enhanced-resolve
 const nodeFs = new CachedInputFileSystem(new NodeJsInputFileSystem(), 4000);
 const concordContext = {};
+
+const replaceValueSymbols = (valueString, replacements) => {
+  const value = valueParser(valueString);
+
+  value.walk((node) => {
+    if (node.type !== 'word') return;
+
+    const replacement = replacements[node.value];
+
+    if (replacement != null) {
+      // eslint-disable-next-line no-param-reassign
+      node.value = replacement;
+    }
+  });
+
+  return value.toString();
+};
 
 const getDefinition = (atRule, existingDefinitions, requiredDefinitions) => {
   let matches;
