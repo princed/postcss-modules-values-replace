@@ -2,7 +2,7 @@ const postcss = require('postcss');
 const path = require('path');
 const promisify = require('es6-promisify');
 const { CachedInputFileSystem, NodeJsInputFileSystem, ResolverFactory } = require('enhanced-resolve');
-const valueParser = require('postcss-value-parser');
+const valuesParser = require('postcss-values-parser');
 
 const matchImports = /^(.+?|\([\s\S]+?\))\s+from\s+("[^"]*"|'[^']*'|[\w-]+)$/;
 const matchValueDefinition = /(?:\s+|^)([\w-]+)(:?\s+)(.+?)(\s*)$/g;
@@ -17,7 +17,7 @@ const nodeFs = new CachedInputFileSystem(new NodeJsInputFileSystem(), 4000);
 const concordContext = {};
 
 const replaceValueSymbols = (valueString, replacements) => {
-  const value = valueParser(valueString);
+  const value = valuesParser(valueString, { loose: true }).parse();
 
   value.walk((node) => {
     if (node.type !== 'word') return;

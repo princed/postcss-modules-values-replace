@@ -48,11 +48,27 @@ test('gives an error when @value statement is invalid', async (t) => {
   await t.throws(processor.process(input, parserOpts));
 });
 
+test('shouldn\'t break on draft spec syntax', async (t) => {
+  await run(
+    t,
+    '.foo { width: calc(2+2); }',
+    '.foo { width: calc(2+2); }',
+  );
+});
+
 test('should replace constants within the file', async (t) => {
   await run(
     t,
     '@value blue red; .foo { color: blue; }',
     '@value blue red; .foo { color: red; }',
+  );
+});
+
+test('shouldn\'t replace number-like values', async (t) => {
+  await run(
+    t,
+    '@value 3char #000; .foo { color: 3char; }',
+    '@value 3char #000; .foo { color: 3char; }',
   );
 });
 
@@ -69,6 +85,22 @@ test('shouldn\'t replace inside url', async (t) => {
     t,
     '@value blue red; .blue { background-image: url(blue.png); }',
     '@value blue red; .blue { background-image: url(blue.png); }',
+  );
+});
+
+test('should replace within calc', async (t) => {
+  await run(
+    t,
+    '@value base: 10px;\n.a { margin: calc(base * 2); }',
+    '@value base: 10px;\n.a { margin: calc(10px * 2); }',
+  );
+});
+
+test('should replace within calc without spaces', async (t) => {
+  await run(
+    t,
+    '@value base: 10px;\n.a { margin: calc(base*2); }',
+    '@value base: 10px;\n.a { margin: calc(10px*2); }',
   );
 });
 
@@ -191,6 +223,22 @@ test('should allow transitive values within calc', async (t) => {
   );
 });
 
+test('should allow transitive values within calc without spaces', async (t) => {
+  await run(
+    t,
+    '@value base: 10px;\n@value large: calc(base*2);\n.a { margin: large; }',
+    '@value base: 10px;\n@value large: calc(10px*2);\n.a { margin: calc(10px*2); }',
+  );
+});
+
+test('should replace inside custom properties', async (t) => {
+  await run(
+    t,
+    '@value path: test.png;\n:root {--path: path};\n.foo { background-image: url(var(--path)); }',
+    '@value path: test.png;\n:root {--path: test.png};\n.foo { background-image: url(var(--path)); }',
+  );
+});
+
 test('should allow custom-property-style names', async (t) => {
   await run(
     t,
@@ -202,9 +250,9 @@ test('should allow custom-property-style names', async (t) => {
 test('should allow all colour types', async (t) => {
   await run(
     t,
-    '@value named: red; @value 3char #0f0; @value 6char #00ff00; @value rgba rgba(34, 12, 64, 0.3); @value hsla hsla(220, 13.0%, 18.0%, 1);\n' +
-    '.foo { color: named; background-color: 3char; border-top-color: 6char; border-bottom-color: rgba; outline-color: hsla; }',
-    '@value named: red; @value 3char #0f0; @value 6char #00ff00; @value rgba rgba(34, 12, 64, 0.3); @value hsla hsla(220, 13.0%, 18.0%, 1);\n' +
+    '@value named: red; @value hex3char #0f0; @value hex6char #00ff00; @value rgba rgba(34, 12, 64, 0.3); @value hsla hsla(220, 13.0%, 18.0%, 1);\n' +
+    '.foo { color: named; background-color: hex3char; border-top-color: hex6char; border-bottom-color: rgba; outline-color: hsla; }',
+    '@value named: red; @value hex3char #0f0; @value hex6char #00ff00; @value rgba rgba(34, 12, 64, 0.3); @value hsla hsla(220, 13.0%, 18.0%, 1);\n' +
     '.foo { color: red; background-color: #0f0; border-top-color: #00ff00; border-bottom-color: rgba(34, 12, 64, 0.3); outline-color: hsla(220, 13.0%, 18.0%, 1); }',
   );
 });
