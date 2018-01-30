@@ -2,6 +2,5 @@
 *.iml
 node_modules/
 !fixtures/node_modules
-lib
 npm-debug.log
 yarn.lock
