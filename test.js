@@ -239,6 +239,14 @@ test('should replace inside custom properties', async (t) => {
   );
 });
 
+test('should replace inside media queries', async (t) => {
+  await run(
+    t,
+    '@value base: 10px;\n@media (min-width: calc(base * 200)) {}',
+    '@value base: 10px;\n@media (min-width: calc(10px * 200)) {}',
+  );
+});
+
 test('should allow custom-property-style names', async (t) => {
   await run(
     t,

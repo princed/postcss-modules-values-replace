@@ -157,6 +157,9 @@ const factory = ({ fs = nodeFs, resolve: options = {} } = {}) => async (root, ro
     if (node.type === 'decl') {
       // eslint-disable-next-line no-param-reassign
       node.value = replaceValueSymbols(node.value, definitions);
+    } else if (node.type === 'atrule' && node.name === 'media') {
+      // eslint-disable-next-line no-param-reassign
+      node.params = replaceValueSymbols(node.params, definitions);
     }
   });
 };
