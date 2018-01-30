@@ -1,6 +1,6 @@
 /* eslint-disable import/no-extraneous-dependencies, global-require */
 
-module.exports = wallaby => ({
+module.exports = () => ({
   files: [
     'index.js',
     { pattern: 'fixtures/**', load: false, instrument: false },
@@ -14,11 +14,5 @@ module.exports = wallaby => ({
     type: 'node',
   },
 
-  compilers: {
-    '*.js': wallaby.compilers.babel(),
-  },
-
   testFramework: 'ava',
-
-  debug: true,
 });
