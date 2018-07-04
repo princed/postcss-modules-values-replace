@@ -69,7 +69,7 @@ const getImports = (aliases) => {
   return imports;
 };
 
-const walk = async (requiredDefinitions, walkFile, root, result) => {
+const walk = (requiredDefinitions, walkFile, root, result) => {
   const rules = [];
   const fromDir = result.opts.from && path.dirname(result.opts.from);
 
@@ -77,91 +77,104 @@ const walk = async (requiredDefinitions, walkFile, root, result) => {
     rules.push(atRule);
   });
 
-  const reduceRules = async (definitionsPromise, atRule) => {
-    const existingDefinitions = await definitionsPromise;
-    const matches = matchImports.exec(atRule.params);
+  function reduceRules(definitionsPromise, atRule) {
+    return definitionsPromise.then((existingDefinitions) => {
+      const matches = matchImports.exec(atRule.params);
+      let exportsPath;
+      let imports;
 
-    if (matches) {
-      // eslint-disable-next-line prefer-const
-      let [/* match */, aliases, pathString] = matches;
+      if (matches) {
+        const aliases = matches[1];
+        let pathString = matches[2];
 
-      // We can use constants for path names
-      if (existingDefinitions[pathString]) {
-        // eslint-disable-next-line prefer-destructuring
-        pathString = existingDefinitions[pathString];
+        // We can use constants for path names
+        if (existingDefinitions[pathString]) {
+          // eslint-disable-next-line prefer-destructuring
+          pathString = existingDefinitions[pathString];
+        }
+
+        // Do nothing if path is not found
+        if (!pathString.match(matchPath)) {
+          return {};
+        }
+
+        exportsPath = pathString.replace(/['"]/g, '');
+        imports = getImports(aliases);
+
+        return walkFile(exportsPath, fromDir, imports)
+          .then(definitions => Object.assign(existingDefinitions, definitions));
       }
 
-      // Do nothing if path is not found
-      if (!pathString.match(matchPath)) {
-        return {};
+      if (atRule.params.indexOf('@value') !== -1) {
+        result.warn(`Invalid value definition: ${atRule.params}`);
       }
 
-      const exportsPath = pathString.replace(/['"]/g, '');
-      const imports = getImports(aliases);
-
-      const definitions = await walkFile(exportsPath, fromDir, imports);
-      return Object.assign(existingDefinitions, definitions);
-    }
-
-    if (atRule.params.indexOf('@value') !== -1) {
-      result.warn(`Invalid value definition: ${atRule.params}`);
-    }
-
-    const newDefinitions = getDefinition(atRule, existingDefinitions, requiredDefinitions);
-    return Object.assign(existingDefinitions, newDefinitions);
-  };
-
-  const definitions = await rules.reduce(reduceRules, Promise.resolve({}));
-
-  if (requiredDefinitions) {
-    const validDefinitions = {};
-    Object.keys(requiredDefinitions).forEach((key) => {
-      validDefinitions[requiredDefinitions[key]] = definitions[key];
+      const newDefinitions = getDefinition(atRule, existingDefinitions, requiredDefinitions);
+      return Promise.resolve(Object.assign(existingDefinitions, newDefinitions));
     });
-
-    result.messages.push({
-      type: INNER_PLUGIN,
-      value: validDefinitions,
-    });
-
-    return undefined;
   }
 
-  return definitions;
+  const definitionsResultPromise = rules.reduce(reduceRules, Promise.resolve({}));
+
+  return definitionsResultPromise.then((definitions) => {
+    let validDefinitions;
+
+    if (requiredDefinitions) {
+      validDefinitions = {};
+      Object.keys(requiredDefinitions).forEach((key) => {
+        validDefinitions[requiredDefinitions[key]] = definitions[key];
+      });
+
+      result.messages.push({
+        type: INNER_PLUGIN,
+        value: validDefinitions,
+      });
+
+      return undefined;
+    }
+
+    return definitions;
+  });
 };
 
 const walkerPlugin = postcss.plugin(INNER_PLUGIN, (fn, ...args) => fn.bind(null, ...args));
 
-const factory = ({ fs = nodeFs, resolve: options = {} } = {}) => async (root, rootResult) => {
+const factory = ({ fs = nodeFs, resolve: options = {} } = {}) => (root, rootResult) => {
   const resolver = ResolverFactory.createResolver(Object.assign({ fileSystem: fs }, options));
   const resolve = promisify(resolver.resolve, resolver);
   const readFile = promisify(fs.readFile, fs);
 
-  async function walkFile(from, dir, requiredDefinitions) {
-    const resolvedFrom = await resolve(concordContext, dir, from);
-    const content = await readFile(resolvedFrom);
-    const result = await postcss([walkerPlugin(walk, requiredDefinitions, walkFile)])
-      .process(content, { from: resolvedFrom });
-
-    return result.messages[0].value;
+  function walkFile(from, dir, requiredDefinitions) {
+    return resolve(concordContext, dir, from)
+      .then(resolvedFrom => readFile(resolvedFrom)
+        .then(content => ({
+          content,
+          resolvedFrom,
+        })))
+      .then(({ content, resolvedFrom }) =>
+        postcss([walkerPlugin(walk, requiredDefinitions, walkFile)])
+          .process(content, { from: resolvedFrom }))
+      .then(result => result.messages[0].value);
   }
 
-  const definitions = await walk(null, walkFile, root, rootResult);
-  rootResult.messages.push({
-    plugin: PLUGIN,
-    type: 'values',
-    values: definitions,
-  });
+  return walk(null, walkFile, root, rootResult)
+    .then((definitions) => {
+      rootResult.messages.push({
+        plugin: PLUGIN,
+        type: 'values',
+        values: definitions,
+      });
 
-  root.walk((node) => {
-    if (node.type === 'decl') {
-      // eslint-disable-next-line no-param-reassign
-      node.value = replaceValueSymbols(node.value, definitions);
-    } else if (node.type === 'atrule' && node.name === 'media') {
-      // eslint-disable-next-line no-param-reassign
-      node.params = replaceValueSymbols(node.params, definitions);
-    }
-  });
+      root.walk((node) => {
+        if (node.type === 'decl') {
+          // eslint-disable-next-line no-param-reassign
+          node.value = replaceValueSymbols(node.value, definitions);
+        } else if (node.type === 'atrule' && node.name === 'media') {
+          // eslint-disable-next-line no-param-reassign
+          node.params = replaceValueSymbols(node.params, definitions);
+        }
+      });
+    });
 };
 
 
