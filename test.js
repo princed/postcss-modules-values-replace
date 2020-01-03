@@ -26,6 +26,10 @@ test('should leave exports as is', async (t) => {
   await run(t, '@value red blue;', '@value red blue;');
 });
 
+test('should remove exports if noEmitExports is true', async (t) => {
+  await run(t, '@value red blue;', '', { noEmitExports: true });
+});
+
 test('gives an error when there is no semicolon between lines', async (t) => {
   const input = '@value red blue\n@value green yellow';
   const processor = postcss([plugin]);
