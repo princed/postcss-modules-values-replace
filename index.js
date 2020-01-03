@@ -167,7 +167,7 @@ const factory = ({
     } else if (node.type === 'atrule' && node.name === 'media') {
       // eslint-disable-next-line no-param-reassign
       node.params = replaceValueSymbols(node.params, definitions);
-    } else if (noEmitExports && node.type === 'atrule') {
+    } else if (noEmitExports && node.type === 'atrule' && node.name === 'value') {
       node.remove();
     }
   });

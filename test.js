@@ -26,6 +26,10 @@ test('should leave exports as is', async (t) => {
   await run(t, '@value red blue;', '@value red blue;');
 });
 
+test('should leave other at rules alone if noEmitExports is true', async (t) => {
+  await run(t, '@font-face {}', '@font-face {}', { noEmitExports: true });
+});
+
 test('should remove exports if noEmitExports is true', async (t) => {
   await run(t, '@value red blue;', '', { noEmitExports: true });
 });
