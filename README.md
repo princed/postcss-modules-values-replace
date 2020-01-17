@@ -80,14 +80,34 @@ See [PostCSS] docs for other examples for your environment.
 
 ### Configuration params
 
-#### fs `Object` 
+#### fs `Object`
 
 File system to use. To make it faster in webpack pass its file system to plugin.
-Cached Node's file system is used by default. 
+Cached Node's file system is used by default.
 
 #### resolve `Object`
 
-[enhanced-resolve]'s configuration object, see there for possible options and defaults.  
+[enhanced-resolve]'s configuration object, see there for possible options and defaults.
+
+
+#### noEmitExports `boolean`
+
+When enabled @value rules/declarations will be removed from the emitted output
+
+**Input:**
+```css
+@value myBrandColor blue;
+@font-face {}
+
+body { background: myBrandColor }
+```
+
+**Output:**
+```css
+@font-face {}
+
+body { background: blue }
+```
 
 ### calc() and @value
 
@@ -154,7 +174,7 @@ and leads to export of following values to JS:
 ### Other computations and @value
 
 [postcss-calc] and [postcss-color-function] are known to work *inside* **@value** as they traverse media queries.
-Experience with other plugins may differ if they ignore media queries.  
+Experience with other plugins may differ if they ignore media queries.
 
 ### Extracting values for programmatic use
 This plugin provides to postcss a custom [messages](http://api.postcss.org/Result.html#messages) object with `type: 'values'`.
