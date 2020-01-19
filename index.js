@@ -132,8 +132,15 @@ const walk = async (requiredDefinitions, walkFile, root, result) => {
 
 const walkerPlugin = postcss.plugin(INNER_PLUGIN, (fn, ...args) => fn.bind(null, ...args));
 
-const factory = ({ fs = nodeFs, resolve: options = {} } = {}) => async (root, rootResult) => {
-  const resolver = ResolverFactory.createResolver(Object.assign({ fileSystem: fs }, options));
+const factory = ({
+  fs = nodeFs,
+  noEmitExports = false,
+  resolve: resolveOptions = {},
+} = {}) => async (root, rootResult) => {
+  const resolver = ResolverFactory.createResolver(Object.assign(
+    { fileSystem: fs },
+    resolveOptions,
+  ));
   const resolve = promisify(resolver.resolve, resolver);
   const readFile = promisify(fs.readFile, fs);
 
@@ -160,6 +167,8 @@ const factory = ({ fs = nodeFs, resolve: options = {} } = {}) => async (root, ro
     } else if (node.type === 'atrule' && node.name === 'media') {
       // eslint-disable-next-line no-param-reassign
       node.params = replaceValueSymbols(node.params, definitions);
+    } else if (noEmitExports && node.type === 'atrule' && node.name === 'value') {
+      node.remove();
     }
   });
 };
