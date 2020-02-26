@@ -2,6 +2,7 @@ const postcss = require('postcss');
 const path = require('path');
 const promisify = require('es6-promisify');
 const { CachedInputFileSystem, NodeJsInputFileSystem, ResolverFactory } = require('enhanced-resolve');
+const { urlToRequest } = require('loader-utils');
 const valuesParser = require('postcss-values-parser');
 
 const matchImports = /^(.+?|\([\s\S]+?\))\s+from\s+("[^"]*"|'[^']*'|[\w-]+)$/;
@@ -143,11 +144,16 @@ const factory = ({
   ));
   const resolve = promisify(resolver.resolve, resolver);
   const readFile = promisify(fs.readFile, fs);
+  const rootPlugins = rootResult.processor.plugins;
+  const oursPluginIndex = rootPlugins.findIndex(plugin =>
+    plugin.postcssPlugin === PLUGIN);
 
   async function walkFile(from, dir, requiredDefinitions) {
-    const resolvedFrom = await resolve(concordContext, dir, from);
+    const resolvedFrom = await resolve(concordContext, dir, urlToRequest(from));
     const content = await readFile(resolvedFrom);
-    const result = await postcss([walkerPlugin(walk, requiredDefinitions, walkFile)])
+    const plugins = [...rootPlugins];
+    plugins.splice(oursPluginIndex, 1, walkerPlugin(walk, requiredDefinitions, walkFile));
+    const result = await postcss(plugins)
       .process(content, { from: resolvedFrom });
 
     return result.messages[0].value;

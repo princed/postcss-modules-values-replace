@@ -1,6 +1,7 @@
 /* eslint-disable import/no-extraneous-dependencies */
 
 const postcss = require('postcss');
+const postcssModulesTilda = require('postcss-modules-tilda');
 const test = require('ava');
 const { resolve } = require('path');
 
@@ -11,8 +12,11 @@ const parserOpts = {
   to: resolve(__dirname, 'fixtures/to.css'),
 };
 
-function run(t, input, output, opts = {}) {
-  return postcss([plugin(opts)]).process(input, parserOpts).then((result) => {
+function run(t, input, output, opts = {}, extraPlugins = []) {
+  return postcss([
+    ...extraPlugins,
+    plugin(opts),
+  ]).process(input, parserOpts).then((result) => {
     t.is(result.css, output);
     t.is(result.warnings().length, 0);
   });
@@ -368,24 +372,42 @@ test('should allow imported transitive values within calc', async (t) => {
 test('should replace an import from modules', async (t) => {
   await run(
     t,
-    '@value module from "module/module.css";\n.a { color: module; }',
-    '@value module from "module/module.css";\n.a { color: black; }',
+    '@value module from "~module/module.css";\n.a { color: module; }',
+    '@value module from "~module/module.css";\n.a { color: black; }',
+  );
+});
+
+test('should replace an import from nested modules', async (t) => {
+  await run(
+    t,
+    '@value nested-scoped-module from "~@scope/nested-module/module.css";\n.a { color: nested-scoped-module; }',
+    '@value nested-scoped-module from "~@scope/nested-module/module.css";\n.a { color: purple; }',
+  );
+});
+
+test('should apply extra plugins to inner processing', async (t) => {
+  await run(
+    t,
+    '@value nested-scoped-module from "~@scope/nested-module-old-syntax/module.css";\n.a { color: nested-scoped-module; }',
+    '@value nested-scoped-module from "~@scope/nested-module-old-syntax/module.css";\n.a { color: purple; }',
+    {},
+    [postcssModulesTilda()],
   );
 });
 
 test('should replace an import from main file of module', async (t) => {
   await run(
     t,
-    '@value module from "module";\n.a { color: module; }',
-    '@value module from "module";\n.a { color: black; }',
+    '@value module from "~module";\n.a { color: module; }',
+    '@value module from "~module";\n.a { color: black; }',
   );
 });
 
 test('should replace an import from scoped modules', async (t) => {
   await run(
     t,
-    '@value scoped-module from "@scope/module/module.css";\n.a { color: scoped-module; }',
-    '@value scoped-module from "@scope/module/module.css";\n.a { color: purple; }',
+    '@value scoped-module from "~@scope/module/module.css";\n.a { color: scoped-module; }',
+    '@value scoped-module from "~@scope/module/module.css";\n.a { color: purple; }',
   );
 });
 
