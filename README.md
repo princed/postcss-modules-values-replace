@@ -109,6 +109,10 @@ body { background: myBrandColor }
 body { background: blue }
 ```
 
+#### preprocessValues `boolean`
+
+When enabled, permit plugins defined earlier in the PostCSS pipeline to modify `@value` declarations before they are recorded by this plugin.
+
 ### calc() and @value
 
 To enable calculations *inside* **@value**, enable media queries support in [postcss-calc]:
