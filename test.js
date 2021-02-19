@@ -390,7 +390,7 @@ test('should apply extra plugins to inner processing', async (t) => {
     t,
     '@value nested-scoped-module from "~@scope/nested-module-old-syntax/module.css";\n.a { color: nested-scoped-module; }',
     '@value nested-scoped-module from "~@scope/nested-module-old-syntax/module.css";\n.a { color: purple; }',
-    {},
+    { preprocessValues: true },
     [postcssModulesTilda()],
   );
 });

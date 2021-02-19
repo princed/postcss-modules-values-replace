@@ -137,6 +137,7 @@ const factory = ({
   fs = nodeFs,
   noEmitExports = false,
   resolve: resolveOptions = {},
+  preprocessValues = false,
 } = {}) => async (root, rootResult) => {
   const resolver = ResolverFactory.createResolver(Object.assign(
     { fileSystem: fs },
@@ -144,15 +145,22 @@ const factory = ({
   ));
   const resolve = promisify(resolver.resolve, resolver);
   const readFile = promisify(fs.readFile, fs);
-  const rootPlugins = rootResult.processor.plugins;
-  const oursPluginIndex = rootPlugins.findIndex(plugin =>
-    plugin.postcssPlugin === PLUGIN);
+
+  let preprocessPlugins = [];
+  if (preprocessValues) {
+    const rootPlugins = rootResult.processor.plugins;
+    const oursPluginIndex = rootPlugins
+      .findIndex(plugin => plugin.postcssPlugin === PLUGIN);
+    preprocessPlugins = rootPlugins.slice(0, oursPluginIndex);
+  }
 
   async function walkFile(from, dir, requiredDefinitions) {
     const resolvedFrom = await resolve(concordContext, dir, urlToRequest(from));
     const content = await readFile(resolvedFrom);
-    const plugins = [...rootPlugins];
-    plugins.splice(oursPluginIndex, 1, walkerPlugin(walk, requiredDefinitions, walkFile));
+    const plugins = [
+      ...preprocessPlugins,
+      walkerPlugin(walk, requiredDefinitions, walkFile),
+    ];
     const result = await postcss(plugins)
       .process(content, { from: resolvedFrom });
 
