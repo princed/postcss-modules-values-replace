@@ -2,7 +2,6 @@ const postcss = require('postcss');
 const path = require('path');
 const promisify = require('es6-promisify');
 const { CachedInputFileSystem, NodeJsInputFileSystem, ResolverFactory } = require('enhanced-resolve');
-const { urlToRequest } = require('loader-utils');
 const valuesParser = require('postcss-values-parser');
 
 const matchImports = /^(.+?|\([\s\S]+?\))\s+from\s+("[^"]*"|'[^']*'|[\w-]+)$/;
@@ -155,7 +154,7 @@ const factory = ({
   }
 
   async function walkFile(from, dir, requiredDefinitions) {
-    const resolvedFrom = await resolve(concordContext, dir, urlToRequest(from));
+    const resolvedFrom = await resolve(concordContext, dir, from);
     const content = await readFile(resolvedFrom);
     const plugins = [
       ...preprocessPlugins,

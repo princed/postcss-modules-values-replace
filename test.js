@@ -1,7 +1,6 @@
 /* eslint-disable import/no-extraneous-dependencies */
 
 const postcss = require('postcss');
-const postcssModulesTilda = require('postcss-modules-tilda');
 const test = require('ava');
 const { resolve } = require('path');
 
@@ -21,6 +20,16 @@ function run(t, input, output, opts = {}, extraPlugins = []) {
     t.is(result.warnings().length, 0);
   });
 }
+
+// Simple plugin that replaces "black" with "purple" within @value declarations,
+// used to test preprocess value transformation
+const blackToPurplePlugin = postcss.plugin('testBlackToPurple', () => (root) => {
+  root.walkAtRules('value', (atRule) => {
+    atRule.replaceWith(atRule.clone({
+      params: atRule.params.replace('black', 'purple'),
+    }));
+  });
+});
 
 test('should pass through an empty string', async (t) => {
   await run(t, '', '');
@@ -372,42 +381,34 @@ test('should allow imported transitive values within calc', async (t) => {
 test('should replace an import from modules', async (t) => {
   await run(
     t,
-    '@value module from "~module/module.css";\n.a { color: module; }',
-    '@value module from "~module/module.css";\n.a { color: black; }',
-  );
-});
-
-test('should replace an import from nested modules', async (t) => {
-  await run(
-    t,
-    '@value nested-scoped-module from "~@scope/nested-module/module.css";\n.a { color: nested-scoped-module; }',
-    '@value nested-scoped-module from "~@scope/nested-module/module.css";\n.a { color: purple; }',
+    '@value module from "module/module.css";\n.a { color: module; }',
+    '@value module from "module/module.css";\n.a { color: black; }',
   );
 });
 
 test('should apply extra plugins to inner processing', async (t) => {
   await run(
     t,
-    '@value nested-scoped-module from "~@scope/nested-module-old-syntax/module.css";\n.a { color: nested-scoped-module; }',
-    '@value nested-scoped-module from "~@scope/nested-module-old-syntax/module.css";\n.a { color: purple; }',
+    '@value module from "module/module.css";\n.a { color: module; }',
+    '@value module from "module/module.css";\n.a { color: purple; }',
     { preprocessValues: true },
-    [postcssModulesTilda()],
+    [blackToPurplePlugin()],
   );
 });
 
 test('should replace an import from main file of module', async (t) => {
   await run(
     t,
-    '@value module from "~module";\n.a { color: module; }',
-    '@value module from "~module";\n.a { color: black; }',
+    '@value module from "module";\n.a { color: module; }',
+    '@value module from "module";\n.a { color: black; }',
   );
 });
 
 test('should replace an import from scoped modules', async (t) => {
   await run(
     t,
-    '@value scoped-module from "~@scope/module/module.css";\n.a { color: scoped-module; }',
-    '@value scoped-module from "~@scope/module/module.css";\n.a { color: purple; }',
+    '@value scoped-module from "@scope/module/module.css";\n.a { color: scoped-module; }',
+    '@value scoped-module from "@scope/module/module.css";\n.a { color: purple; }',
   );
 });
 
