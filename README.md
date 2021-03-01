@@ -9,6 +9,7 @@
 [postcss-calc]: https://github.com/postcss/postcss-calc
 [postcss-cssnext]: https://github.com/MoOx/postcss-cssnext
 [postcss-color-function]: https://github.com/postcss/postcss-color-function
+[postcss-modules-tilda]: https://github.com/princed/postcss-modules-tilda
 [postcss-modules-values]: https://github.com/css-modules/postcss-modules-values
 [modules-values-extract]: https://github.com/alexhisen/modules-values-extract
 [enhanced-resolve]: https://github.com/webpack/enhanced-resolve/#contributing
@@ -112,6 +113,11 @@ body { background: blue }
 #### preprocessValues `boolean`
 
 When enabled, permit plugins defined earlier in the PostCSS pipeline to modify `@value` declarations before they are recorded by this plugin.
+
+#### importsAsModuleRequests `boolean`
+
+When enabled, value imports will be resolved as module requests, in line with `css-loader`'s resolution logic [as of 2.0.0](https://github.com/webpack-contrib/css-loader/blob/master/CHANGELOG.md#200-2018-12-07).
+If your code is written with pre-2.0 import syntax, and utilises [postcss-modules-tilda] for compatibility, this option is not required.
 
 ### calc() and @value
 

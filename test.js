@@ -412,6 +412,15 @@ test('should replace an import from scoped modules', async (t) => {
   );
 });
 
+test('should resolve imports as module requests', async (t) => {
+  await run(
+    t,
+    '@value scoped-module from "~@scope/module/module.css";\n@value base from "level1.css";\n.a { color: scoped-module; width: base; }',
+    '@value scoped-module from "~@scope/module/module.css";\n@value base from "level1.css";\n.a { color: purple; width: 10px; }',
+    { importsAsModuleRequests: true },
+  );
+});
+
 test('variables are also present in messages', async (t) => {
   const input = '@value myColor: blue; @value myColor2: myColor';
   const processor = postcss([plugin]);
