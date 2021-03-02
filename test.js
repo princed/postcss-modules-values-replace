@@ -11,12 +11,25 @@ const parserOpts = {
   to: resolve(__dirname, 'fixtures/to.css'),
 };
 
-function run(t, input, output, opts = {}) {
-  return postcss([plugin(opts)]).process(input, parserOpts).then((result) => {
+function run(t, input, output, opts = {}, extraPlugins = []) {
+  return postcss([
+    ...extraPlugins,
+    plugin(opts),
+  ]).process(input, parserOpts).then((result) => {
     t.is(result.css, output);
     t.is(result.warnings().length, 0);
   });
 }
+
+// Simple plugin that replaces "black" with "purple" within @value declarations,
+// used to test preprocess value transformation
+const blackToPurplePlugin = postcss.plugin('testBlackToPurple', () => (root) => {
+  root.walkAtRules('value', (atRule) => {
+    atRule.replaceWith(atRule.clone({
+      params: atRule.params.replace('black', 'purple'),
+    }));
+  });
+});
 
 test('should pass through an empty string', async (t) => {
   await run(t, '', '');
@@ -373,6 +386,16 @@ test('should replace an import from modules', async (t) => {
   );
 });
 
+test('should apply extra plugins to inner processing', async (t) => {
+  await run(
+    t,
+    '@value module from "module/module.css";\n.a { color: module; }',
+    '@value module from "module/module.css";\n.a { color: purple; }',
+    { preprocessValues: true },
+    [blackToPurplePlugin()],
+  );
+});
+
 test('should replace an import from main file of module', async (t) => {
   await run(
     t,
@@ -386,6 +409,15 @@ test('should replace an import from scoped modules', async (t) => {
     t,
     '@value scoped-module from "@scope/module/module.css";\n.a { color: scoped-module; }',
     '@value scoped-module from "@scope/module/module.css";\n.a { color: purple; }',
+  );
+});
+
+test('should resolve imports as module requests', async (t) => {
+  await run(
+    t,
+    '@value scoped-module from "~@scope/module/module.css";\n@value base from "level1.css";\n.a { color: scoped-module; width: base; }',
+    '@value scoped-module from "~@scope/module/module.css";\n@value base from "level1.css";\n.a { color: purple; width: 10px; }',
+    { importsAsModuleRequests: true },
   );
 });
 

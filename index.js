@@ -3,6 +3,7 @@ const path = require('path');
 const promisify = require('es6-promisify');
 const { CachedInputFileSystem, NodeJsInputFileSystem, ResolverFactory } = require('enhanced-resolve');
 const valuesParser = require('postcss-values-parser');
+const { urlToRequest } = require('loader-utils');
 
 const matchImports = /^(.+?|\([\s\S]+?\))\s+from\s+("[^"]*"|'[^']*'|[\w-]+)$/;
 const matchValueDefinition = /(?:\s+|^)([\w-]+)(:?\s+)(.+?)(\s*)$/g;
@@ -136,6 +137,8 @@ const factory = ({
   fs = nodeFs,
   noEmitExports = false,
   resolve: resolveOptions = {},
+  preprocessValues = false,
+  importsAsModuleRequests = false,
 } = {}) => async (root, rootResult) => {
   const resolver = ResolverFactory.createResolver(Object.assign(
     { fileSystem: fs },
@@ -144,10 +147,23 @@ const factory = ({
   const resolve = promisify(resolver.resolve, resolver);
   const readFile = promisify(fs.readFile, fs);
 
+  let preprocessPlugins = [];
+  if (preprocessValues) {
+    const rootPlugins = rootResult.processor.plugins;
+    const oursPluginIndex = rootPlugins
+      .findIndex(plugin => plugin.postcssPlugin === PLUGIN);
+    preprocessPlugins = rootPlugins.slice(0, oursPluginIndex);
+  }
+
   async function walkFile(from, dir, requiredDefinitions) {
-    const resolvedFrom = await resolve(concordContext, dir, from);
+    const request = importsAsModuleRequests ? urlToRequest(from) : from;
+    const resolvedFrom = await resolve(concordContext, dir, request);
     const content = await readFile(resolvedFrom);
-    const result = await postcss([walkerPlugin(walk, requiredDefinitions, walkFile)])
+    const plugins = [
+      ...preprocessPlugins,
+      walkerPlugin(walk, requiredDefinitions, walkFile),
+    ];
+    const result = await postcss(plugins)
       .process(content, { from: resolvedFrom });
 
     return result.messages[0].value;
