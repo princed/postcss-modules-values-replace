@@ -421,6 +421,15 @@ test('should resolve imports as module requests', async (t) => {
   );
 });
 
+test('should replace values within rule selectors', async (t) => {
+  await run(
+    t,
+    '@value selectorValue: .exampleClass;\nselectorValue a { color: purple; }',
+    '@value selectorValue: .exampleClass;\n.exampleClass a { color: purple; }',
+    { replaceInSelectors: true },
+  );
+});
+
 test('variables are also present in messages', async (t) => {
   const input = '@value myColor: blue; @value myColor2: myColor';
   const processor = postcss([plugin]);

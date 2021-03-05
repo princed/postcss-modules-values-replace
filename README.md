@@ -119,6 +119,10 @@ When enabled, permit plugins defined earlier in the PostCSS pipeline to modify `
 When enabled, value imports will be resolved as module requests, in line with `css-loader`'s resolution logic [as of 2.0.0](https://github.com/webpack-contrib/css-loader/blob/master/CHANGELOG.md#200-2018-12-07).
 If your code is written with pre-2.0 import syntax, and utilises [postcss-modules-tilda] for compatibility, this option is not required.
 
+#### replaceInSelectors `boolean`
+
+When enabled, value usage within rule selectors will also be replaced by this plugin.
+
 ### calc() and @value
 
 To enable calculations *inside* **@value**, enable media queries support in [postcss-calc]:
