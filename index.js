@@ -4,6 +4,7 @@ const promisify = require('es6-promisify');
 const { CachedInputFileSystem, NodeJsInputFileSystem, ResolverFactory } = require('enhanced-resolve');
 const valuesParser = require('postcss-values-parser');
 const { urlToRequest } = require('loader-utils');
+const ICSSUtils = require('icss-utils');
 
 const matchImports = /^(.+?|\([\s\S]+?\))\s+from\s+("[^"]*"|'[^']*'|[\w-]+)$/;
 const matchValueDefinition = /(?:\s+|^)([\w-]+)(:?\s+)(.+?)(\s*)$/g;
@@ -139,6 +140,7 @@ const factory = ({
   resolve: resolveOptions = {},
   preprocessValues = false,
   importsAsModuleRequests = false,
+  replaceInSelectors = false,
 } = {}) => async (root, rootResult) => {
   const resolver = ResolverFactory.createResolver(Object.assign(
     { fileSystem: fs },
@@ -183,6 +185,9 @@ const factory = ({
     } else if (node.type === 'atrule' && node.name === 'media') {
       // eslint-disable-next-line no-param-reassign
       node.params = replaceValueSymbols(node.params, definitions);
+    } else if (replaceInSelectors && node.type === 'rule') {
+      // eslint-disable-next-line no-param-reassign
+      node.selector = ICSSUtils.replaceValueSymbols(node.selector, definitions);
     } else if (noEmitExports && node.type === 'atrule' && node.name === 'value') {
       node.remove();
     }
