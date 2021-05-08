@@ -102,6 +102,7 @@ const walk = async (requiredDefinitions, walkFile, root, result) => {
       const imports = getImports(aliases);
       const definitions = await walkFile(exportsPath, fromDir, imports);
 
+      // Map the exported symbols to their aliased names in the importing module.
       Object.keys(imports).forEach((key) => {
         existingDefinitions[imports[key]] = definitions[key];
       });
@@ -141,7 +142,6 @@ const factory = ({
   importsAsModuleRequests = false,
   replaceInSelectors = false,
 } = {}) => async (root, rootResult) => {
-  const cache = new Map();
   const resolver = ResolverFactory.createResolver(Object.assign(
     { fileSystem: fs },
     resolveOptions,
@@ -157,11 +157,12 @@ const factory = ({
     preprocessPlugins = rootPlugins.slice(0, oursPluginIndex);
   }
 
+  const definitionCache = new Map();
   async function walkFile(from, dir, requiredDefinitions) {
     const request = importsAsModuleRequests ? urlToRequest(from) : from;
     const resolvedFrom = await resolve(concordContext, dir, request);
 
-    const cached = cache.get(resolvedFrom);
+    const cached = definitionCache.get(resolvedFrom);
     if (cached) {
       return cached;
     }
@@ -174,7 +175,7 @@ const factory = ({
     const result = await postcss(plugins)
       .process(content, { from: resolvedFrom });
 
-    cache.set(resolvedFrom, result.messages[0].value);
+    definitionCache.set(resolvedFrom, result.messages[0].value);
 
     return result.messages[0].value;
   }
