@@ -35,40 +35,86 @@ const replaceValueSymbols = (valueString, replacements) => {
   return value.toString();
 };
 
-const getDefinition = (atRule, existingDefinitions, requiredDefinitions) => {
-  let matches;
+const buildValueDefinitions = (atRule) => {
   const definition = {};
-
-  // eslint-disable-next-line no-cond-assign
-  while (matches = matchValueDefinition.exec(atRule.params)) {
-    const [/* match */, requiredName, middle, value, end] = matches;
-    // Add to the definitions, knowing that values can refer to each other
-    definition[requiredName] = replaceValueSymbols(value, existingDefinitions);
-
-    if (!requiredDefinitions) {
-      // eslint-disable-next-line no-param-reassign
-      atRule.params = requiredName + middle + definition[requiredName] + end;
-    }
+  matchValueDefinition.lastIndex = 0;
+  const matches = matchValueDefinition.exec(atRule.params);
+  if (matches) {
+    const [/* match */, name, middle, value, end] = matches;
+    definition[name] = {
+      type: 'value',
+      name,
+      value,
+      atRule, // Keep `atRule` to replace transitive value later.
+      middle,
+      end,
+    };
   }
-
   return definition;
 };
 
-const getImports = (aliases) => {
+const buildImportDefinitions = (aliases, filePath) => {
   const imports = {};
 
   aliases.replace(/^\(\s*([\s\S]+)\s*\)$/, '$1').split(/\s*,\s*/).forEach((alias) => {
+    matchImport.lastIndex = 0;
     const tokens = matchImport.exec(alias);
 
     if (tokens) {
       const [/* match */, theirName, myName = theirName] = tokens;
-      imports[theirName] = myName;
+      imports[myName] = {
+        type: 'import',
+        myName,
+        theirName,
+        filePath,
+      };
     } else {
       throw new Error(`@value statement "${alias}" is invalid!`);
     }
   });
 
   return imports;
+};
+
+const resolveDefinition = async (definitions, key, walkFile, fromDir, allowTransitive) => {
+  async function replaceValue(definition) {
+    const valueString = definition.value;
+    const value = valuesParser(valueString, { loose: true }).parse();
+    const lazyResults = [];
+    value.walk((node) => {
+      if (node.type !== 'word') return;
+      if (definitions[node.value]) {
+        const promise = resolveDefinition(definitions, node.value, walkFile, fromDir)
+          .then((newValue) => {
+            // eslint-disable-next-line no-param-reassign
+            node.value = newValue;
+          });
+        lazyResults.push(promise);
+      }
+    });
+
+    await Promise.all(lazyResults);
+    const newValue = value.toString();
+    if (allowTransitive) {
+      // eslint-disable-next-line no-param-reassign
+      definition.atRule.params = definition.name + definition.middle + newValue + definition.end;
+    }
+    return newValue;
+  }
+
+  const definition = definitions[key];
+  if (definition != null) {
+    switch (definition.type) {
+      case 'value':
+        return replaceValue(definition);
+      case 'import':
+        return walkFile(definition.filePath, fromDir, { [definition.theirName]: definition })
+          .then(value => value[definition.theirName]);
+      default:
+        throw new Error(`Definition type "${definition.type}" is invalid`);
+    }
+  }
+  return null;
 };
 
 const walk = async (requiredDefinitions, walkFile, root, result) => {
@@ -79,8 +125,8 @@ const walk = async (requiredDefinitions, walkFile, root, result) => {
     rules.push(atRule);
   });
 
-  const reduceRules = async (definitionsPromise, atRule) => {
-    const existingDefinitions = await definitionsPromise;
+  const collectDefinitions = (existingDefinitions, atRule) => {
+    matchImports.lastIndex = 0;
     const matches = matchImports.exec(atRule.params);
 
     if (matches) {
@@ -90,7 +136,7 @@ const walk = async (requiredDefinitions, walkFile, root, result) => {
       // We can use constants for path names
       if (existingDefinitions[pathString]) {
         // eslint-disable-next-line prefer-destructuring
-        pathString = existingDefinitions[pathString];
+        pathString = existingDefinitions[pathString].value;
       }
 
       // Do nothing if path is not found
@@ -99,37 +145,44 @@ const walk = async (requiredDefinitions, walkFile, root, result) => {
       }
 
       const exportsPath = pathString.replace(/['"]/g, '');
-      const imports = getImports(aliases);
+      const imports = buildImportDefinitions(aliases, exportsPath);
 
-      const definitions = await walkFile(exportsPath, fromDir, imports);
-      return Object.assign(existingDefinitions, definitions);
+      return Object.assign(existingDefinitions, imports);
     }
 
     if (atRule.params.indexOf('@value') !== -1) {
       result.warn(`Invalid value definition: ${atRule.params}`);
     }
 
-    const newDefinitions = getDefinition(atRule, existingDefinitions, requiredDefinitions);
+    const newDefinitions = buildValueDefinitions(atRule);
+    // const newDefinitions = getDefinition(atRule, existingDefinitions, requiredDefinitions);
     return Object.assign(existingDefinitions, newDefinitions);
   };
 
-  const definitions = await rules.reduce(reduceRules, Promise.resolve({}));
+  const definitions = rules.reduce(collectDefinitions, {});
+
+  const resolvedValues = await Object.keys(requiredDefinitions || definitions)
+    .reduce(async (previousPromise, key) => {
+      const previous = await previousPromise;
+      const allowTransitive = !requiredDefinitions;
+      // eslint-disable-next-line max-len
+      const newValue = await resolveDefinition(definitions, key, walkFile, fromDir, allowTransitive);
+      if (newValue) {
+        previous[key] = newValue;
+      }
+      return previous;
+    }, Promise.resolve({}));
 
   if (requiredDefinitions) {
-    const validDefinitions = {};
-    Object.keys(requiredDefinitions).forEach((key) => {
-      validDefinitions[requiredDefinitions[key]] = definitions[key];
-    });
-
     result.messages.push({
       type: INNER_PLUGIN,
-      value: validDefinitions,
+      value: resolvedValues,
     });
 
     return undefined;
   }
 
-  return definitions;
+  return resolvedValues;
 };
 
 const walkerPlugin = postcss.plugin(INNER_PLUGIN, (fn, ...args) => fn.bind(null, ...args));
