@@ -120,9 +120,10 @@ const resolveDefinition = async (definitions, key, walkFile, allowTransitive) =>
   return null;
 };
 
-const evaluateDefinitions = async (definitions, requiredDefinitions, walkFile, noRequired) => {
+const evaluateDefinitions = async (definitions, requiredDefinitions, walkFile) => {
+  const noRequired = !requiredDefinitions;
   let keys;
-  if (!requiredDefinitions) {
+  if (noRequired) {
     // All keys in definitions must be resolved
     keys = Object.keys(definitions);
   } else {
@@ -149,7 +150,6 @@ const evaluateDefinitions = async (definitions, requiredDefinitions, walkFile, n
 const walk = async (requiredDefinitions, walkFile, root, result) => {
   const rules = [];
   const fromDir = result.opts.from && path.dirname(result.opts.from);
-  const noRequired = !requiredDefinitions;
 
   root.walkAtRules('value', (atRule) => {
     rules.push(atRule);
@@ -189,9 +189,9 @@ const walk = async (requiredDefinitions, walkFile, root, result) => {
   };
 
   const definitions = rules.reduce(collectDefinitions, {});
-  await evaluateDefinitions(definitions, requiredDefinitions, walkFile, noRequired);
+  await evaluateDefinitions(definitions, requiredDefinitions, walkFile);
 
-  if (!noRequired) {
+  if (requiredDefinitions) {
     result.messages.push({
       type: INNER_PLUGIN,
       value: definitions,
