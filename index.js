@@ -53,7 +53,7 @@ const buildValueDefinitions = (atRule) => {
   return definition;
 };
 
-const buildImportDefinitions = (aliases, filePath) => {
+const buildImportDefinitions = (aliases, fromDir, filePath) => {
   const imports = {};
 
   aliases.replace(/^\(\s*([\s\S]+)\s*\)$/, '$1').split(/\s*,\s*/).forEach((alias) => {
@@ -66,6 +66,7 @@ const buildImportDefinitions = (aliases, filePath) => {
         type: 'import',
         myName,
         theirName,
+        fromDir,
         filePath,
       };
     } else {
@@ -76,7 +77,7 @@ const buildImportDefinitions = (aliases, filePath) => {
   return imports;
 };
 
-const resolveDefinition = async (definitions, key, walkFile, fromDir, allowTransitive) => {
+const resolveDefinition = async (definitions, key, walkFile, allowTransitive) => {
   async function replaceValue(definition) {
     const valueString = definition.value;
     const value = valuesParser(valueString, { loose: true }).parse();
@@ -84,7 +85,7 @@ const resolveDefinition = async (definitions, key, walkFile, fromDir, allowTrans
     value.walk((node) => {
       if (node.type !== 'word') return;
       if (definitions[node.value]) {
-        const promise = resolveDefinition(definitions, node.value, walkFile, fromDir)
+        const promise = resolveDefinition(definitions, node.value, walkFile)
           .then((newValue) => {
             // eslint-disable-next-line no-param-reassign
             node.value = newValue;
@@ -104,11 +105,13 @@ const resolveDefinition = async (definitions, key, walkFile, fromDir, allowTrans
 
   const definition = definitions[key];
   if (definition != null) {
+    let required;
     switch (definition.type) {
       case 'value':
         return replaceValue(definition);
       case 'import':
-        return walkFile(definition.filePath, fromDir, { [definition.theirName]: definition })
+        required = { [definition.theirName]: definition };
+        return walkFile(definition.filePath, definition.fromDir, required)
           .then(value => value[definition.theirName]);
       default:
         throw new Error(`Definition type "${definition.type}" is invalid`);
@@ -117,9 +120,36 @@ const resolveDefinition = async (definitions, key, walkFile, fromDir, allowTrans
   return null;
 };
 
+const reevaluateDefinitions = async (cached, requiredDefinitions, walkFile) => {
+  let keys;
+  if (!requiredDefinitions) {
+    // All keys in cached must be resolved
+    keys = Object.keys(cached);
+  } else {
+    // Otherwise, only keys in requiredDefinitions will be re-evaluated
+    keys = Object.keys(requiredDefinitions);
+  }
+  const promises = [];
+  // eslint-disable-next-line no-plusplus
+  for (let i = keys.length - 1; i >= 0; i--) {
+    const key = keys[i];
+    if (cached[key] && typeof cached[key] === 'object' && cached[key].type) {
+      const promise = resolveDefinition(cached, key, walkFile).then((value) => {
+        // eslint-disable-next-line no-param-reassign
+        cached[key] = value;
+      });
+      promises.push(promise);
+    }
+  }
+  if (promises.length) {
+    await Promise.all(promises);
+  }
+};
+
 const walk = async (requiredDefinitions, walkFile, root, result) => {
   const rules = [];
   const fromDir = result.opts.from && path.dirname(result.opts.from);
+  const noRequired = !requiredDefinitions;
 
   root.walkAtRules('value', (atRule) => {
     rules.push(atRule);
@@ -145,7 +175,7 @@ const walk = async (requiredDefinitions, walkFile, root, result) => {
       }
 
       const exportsPath = pathString.replace(/['"]/g, '');
-      const imports = buildImportDefinitions(aliases, exportsPath);
+      const imports = buildImportDefinitions(aliases, fromDir, exportsPath);
 
       return Object.assign(existingDefinitions, imports);
     }
@@ -155,25 +185,28 @@ const walk = async (requiredDefinitions, walkFile, root, result) => {
     }
 
     const newDefinitions = buildValueDefinitions(atRule);
-    // const newDefinitions = getDefinition(atRule, existingDefinitions, requiredDefinitions);
     return Object.assign(existingDefinitions, newDefinitions);
   };
 
   const definitions = rules.reduce(collectDefinitions, {});
 
-  const resolvedValues = await Object.keys(requiredDefinitions || definitions)
+  const resolvedValues = await Object.keys(definitions)
     .reduce(async (previousPromise, key) => {
       const previous = await previousPromise;
-      const allowTransitive = !requiredDefinitions;
-      // eslint-disable-next-line max-len
-      const newValue = await resolveDefinition(definitions, key, walkFile, fromDir, allowTransitive);
+      if (requiredDefinitions && !requiredDefinitions[key]) {
+        // In imported file but the current key is not required by the importing file,
+        // skip it with the info of definition to resolve later if needed.
+        previous[key] = definitions[key];
+        return previous;
+      }
+      const newValue = await resolveDefinition(definitions, key, walkFile, noRequired);
       if (newValue) {
         previous[key] = newValue;
       }
       return previous;
     }, Promise.resolve({}));
 
-  if (requiredDefinitions) {
+  if (!noRequired) {
     result.messages.push({
       type: INNER_PLUGIN,
       value: resolvedValues,
@@ -210,9 +243,17 @@ const factory = ({
     preprocessPlugins = rootPlugins.slice(0, oursPluginIndex);
   }
 
+  const definitionCache = new Map();
   async function walkFile(from, dir, requiredDefinitions) {
     const request = importsAsModuleRequests ? urlToRequest(from) : from;
     const resolvedFrom = await resolve(concordContext, dir, request);
+
+    const cached = definitionCache.get(resolvedFrom);
+    if (cached) {
+      await reevaluateDefinitions(cached, requiredDefinitions, walkFile);
+      return cached;
+    }
+
     const content = await readFile(resolvedFrom);
     const plugins = [
       ...preprocessPlugins,
@@ -220,6 +261,8 @@ const factory = ({
     ];
     const result = await postcss(plugins)
       .process(content, { from: resolvedFrom });
+
+    definitionCache.set(resolvedFrom, result.messages[0].value);
 
     return result.messages[0].value;
   }
