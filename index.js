@@ -120,11 +120,11 @@ const resolveDefinition = async (definitions, key, walkFile, allowTransitive) =>
   return null;
 };
 
-const reevaluateDefinitions = async (cached, requiredDefinitions, walkFile) => {
+const evaluateDefinitions = async (definitions, requiredDefinitions, walkFile, noRequired) => {
   let keys;
   if (!requiredDefinitions) {
-    // All keys in cached must be resolved
-    keys = Object.keys(cached);
+    // All keys in definitions must be resolved
+    keys = Object.keys(definitions);
   } else {
     // Otherwise, only keys in requiredDefinitions will be re-evaluated
     keys = Object.keys(requiredDefinitions);
@@ -133,10 +133,10 @@ const reevaluateDefinitions = async (cached, requiredDefinitions, walkFile) => {
   // eslint-disable-next-line no-plusplus
   for (let i = keys.length - 1; i >= 0; i--) {
     const key = keys[i];
-    if (cached[key] && typeof cached[key] === 'object' && cached[key].type) {
-      const promise = resolveDefinition(cached, key, walkFile).then((value) => {
+    if (definitions[key] && typeof definitions[key] === 'object' && definitions[key].type) {
+      const promise = resolveDefinition(definitions, key, walkFile, noRequired).then((value) => {
         // eslint-disable-next-line no-param-reassign
-        cached[key] = value;
+        definitions[key] = value;
       });
       promises.push(promise);
     }
@@ -189,33 +189,18 @@ const walk = async (requiredDefinitions, walkFile, root, result) => {
   };
 
   const definitions = rules.reduce(collectDefinitions, {});
-
-  const resolvedValues = await Object.keys(definitions)
-    .reduce(async (previousPromise, key) => {
-      const previous = await previousPromise;
-      if (requiredDefinitions && !requiredDefinitions[key]) {
-        // In imported file but the current key is not required by the importing file,
-        // skip it with the info of definition to resolve later if needed.
-        previous[key] = definitions[key];
-        return previous;
-      }
-      const newValue = await resolveDefinition(definitions, key, walkFile, noRequired);
-      if (newValue) {
-        previous[key] = newValue;
-      }
-      return previous;
-    }, Promise.resolve({}));
+  await evaluateDefinitions(definitions, requiredDefinitions, walkFile, noRequired);
 
   if (!noRequired) {
     result.messages.push({
       type: INNER_PLUGIN,
-      value: resolvedValues,
+      value: definitions,
     });
 
     return undefined;
   }
 
-  return resolvedValues;
+  return definitions;
 };
 
 const walkerPlugin = postcss.plugin(INNER_PLUGIN, (fn, ...args) => fn.bind(null, ...args));
@@ -250,7 +235,7 @@ const factory = ({
 
     const cached = definitionCache.get(resolvedFrom);
     if (cached) {
-      await reevaluateDefinitions(cached, requiredDefinitions, walkFile);
+      await evaluateDefinitions(cached, requiredDefinitions, walkFile);
       return cached;
     }
 
