@@ -100,9 +100,14 @@ const walk = async (requiredDefinitions, walkFile, root, result) => {
 
       const exportsPath = pathString.replace(/['"]/g, '');
       const imports = getImports(aliases);
-
       const definitions = await walkFile(exportsPath, fromDir, imports);
-      return Object.assign(existingDefinitions, definitions);
+
+      // Map the exported symbols to their aliased names in the importing module.
+      Object.keys(imports).forEach((key) => {
+        existingDefinitions[imports[key]] = definitions[key];
+      });
+
+      return existingDefinitions;
     }
 
     if (atRule.params.indexOf('@value') !== -1) {
@@ -116,14 +121,9 @@ const walk = async (requiredDefinitions, walkFile, root, result) => {
   const definitions = await rules.reduce(reduceRules, Promise.resolve({}));
 
   if (requiredDefinitions) {
-    const validDefinitions = {};
-    Object.keys(requiredDefinitions).forEach((key) => {
-      validDefinitions[requiredDefinitions[key]] = definitions[key];
-    });
-
     result.messages.push({
       type: INNER_PLUGIN,
-      value: validDefinitions,
+      value: definitions,
     });
 
     return undefined;
@@ -157,9 +157,16 @@ const factory = ({
     preprocessPlugins = rootPlugins.slice(0, oursPluginIndex);
   }
 
+  const definitionCache = new Map();
   async function walkFile(from, dir, requiredDefinitions) {
     const request = importsAsModuleRequests ? urlToRequest(from) : from;
     const resolvedFrom = await resolve(concordContext, dir, request);
+
+    const cached = definitionCache.get(resolvedFrom);
+    if (cached) {
+      return cached;
+    }
+
     const content = await readFile(resolvedFrom);
     const plugins = [
       ...preprocessPlugins,
@@ -167,6 +174,8 @@ const factory = ({
     ];
     const result = await postcss(plugins)
       .process(content, { from: resolvedFrom });
+
+    definitionCache.set(resolvedFrom, result.messages[0].value);
 
     return result.messages[0].value;
   }
