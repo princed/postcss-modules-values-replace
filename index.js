@@ -2,7 +2,7 @@ const postcss = require('postcss');
 const path = require('path');
 const promisify = require('es6-promisify');
 const { CachedInputFileSystem, NodeJsInputFileSystem, ResolverFactory } = require('enhanced-resolve');
-const valuesParser = require('postcss-values-parser');
+const { parse } = require('postcss-values-parser');
 const { urlToRequest } = require('loader-utils');
 const ICSSUtils = require('icss-utils');
 
@@ -19,7 +19,7 @@ const nodeFs = new CachedInputFileSystem(new NodeJsInputFileSystem(), 4000);
 const concordContext = {};
 
 const replaceValueSymbols = (valueString, replacements) => {
-  const value = valuesParser(valueString, { loose: true }).parse();
+  const value = parse(valueString, { ignoreUnknownWords: true });
 
   value.walk((node) => {
     if (node.type !== 'word') return;
@@ -132,7 +132,13 @@ const walk = async (requiredDefinitions, walkFile, root, result) => {
   return definitions;
 };
 
-const walkerPlugin = postcss.plugin(INNER_PLUGIN, (fn, ...args) => fn.bind(null, ...args));
+const walkerPlugin = (fn, ...args) => ({
+  postcssPlugin: INNER_PLUGIN,
+  Once(root, { result }) {
+    return fn.call(null, ...args, root, result);
+  },
+});
+walkerPlugin.postcss = true;
 
 const factory = ({
   fs = nodeFs,
@@ -141,70 +147,87 @@ const factory = ({
   preprocessValues = false,
   importsAsModuleRequests = false,
   replaceInSelectors = false,
-} = {}) => async (root, rootResult) => {
-  const resolver = ResolverFactory.createResolver(Object.assign(
-    { fileSystem: fs },
-    resolveOptions,
-  ));
-  const resolve = promisify(resolver.resolve, resolver);
-  const readFile = promisify(fs.readFile, fs);
+} = {}) => ({
+  postcssPlugin: PLUGIN,
+  prepare(rootResult) {
+    let definitions;
 
-  let preprocessPlugins = [];
-  if (preprocessValues) {
-    const rootPlugins = rootResult.processor.plugins;
-    const oursPluginIndex = rootPlugins
-      .findIndex(plugin => plugin.postcssPlugin === PLUGIN);
-    preprocessPlugins = rootPlugins.slice(0, oursPluginIndex);
-  }
+    return {
+      async Once(root) {
+        const resolver = ResolverFactory.createResolver(Object.assign(
+          { fileSystem: fs },
+          resolveOptions,
+        ));
+        const resolve = promisify(resolver.resolve, resolver);
+        const readFile = promisify(fs.readFile, fs);
 
-  const definitionCache = new Map();
-  async function walkFile(from, dir, requiredDefinitions) {
-    const request = importsAsModuleRequests ? urlToRequest(from) : from;
-    const resolvedFrom = await resolve(concordContext, dir, request);
+        let preprocessPlugins = [];
+        if (preprocessValues) {
+          const rootPlugins = rootResult.processor.plugins;
+          const oursPluginIndex = rootPlugins
+            .findIndex(plugin => plugin.postcssPlugin === PLUGIN);
+          preprocessPlugins = rootPlugins.slice(0, oursPluginIndex);
+        }
 
-    const cached = definitionCache.get(resolvedFrom);
-    if (cached) {
-      return cached;
-    }
+        const definitionCache = new Map();
+        async function walkFile(from, dir, requiredDefinitions) {
+          const request = importsAsModuleRequests ? urlToRequest(from) : from;
+          const resolvedFrom = await resolve(concordContext, dir, request);
 
-    const content = await readFile(resolvedFrom);
-    const plugins = [
-      ...preprocessPlugins,
-      walkerPlugin(walk, requiredDefinitions, walkFile),
-    ];
-    const result = await postcss(plugins)
-      .process(content, { from: resolvedFrom });
+          const cached = definitionCache.get(resolvedFrom);
+          if (cached) {
+            return cached;
+          }
 
-    definitionCache.set(resolvedFrom, result.messages[0].value);
+          const content = await readFile(resolvedFrom);
+          const plugins = [
+            ...preprocessPlugins,
+            walkerPlugin(walk, requiredDefinitions, walkFile),
+          ];
+          const result = await postcss(plugins)
+            .process(content, { from: resolvedFrom });
 
-    return result.messages[0].value;
-  }
+          definitionCache.set(resolvedFrom, result.messages[0].value);
 
-  const definitions = await walk(null, walkFile, root, rootResult);
-  rootResult.messages.push({
-    plugin: PLUGIN,
-    type: 'values',
-    values: definitions,
-  });
+          return result.messages[0].value;
+        }
 
-  root.walk((node) => {
-    if (node.type === 'decl') {
-      // eslint-disable-next-line no-param-reassign
-      node.value = replaceValueSymbols(node.value, definitions);
-    } else if (node.type === 'atrule' && node.name === 'media') {
-      // eslint-disable-next-line no-param-reassign
-      node.params = replaceValueSymbols(node.params, definitions);
-    } else if (replaceInSelectors && node.type === 'rule') {
-      // eslint-disable-next-line no-param-reassign
-      node.selector = ICSSUtils.replaceValueSymbols(node.selector, definitions);
-    } else if (noEmitExports && node.type === 'atrule' && node.name === 'value') {
-      node.remove();
-    }
-  });
-};
+        definitions = await walk(null, walkFile, root, rootResult);
+        rootResult.messages.push({
+          plugin: PLUGIN,
+          type: 'values',
+          values: definitions,
+        });
+      },
+      Declaration(node) {
+        // eslint-disable-next-line no-param-reassign
+        node.value = replaceValueSymbols(node.value, definitions);
+      },
+      AtRule: {
+        media(node) {
+          // eslint-disable-next-line no-param-reassign
+          node.params = replaceValueSymbols(node.params, definitions);
+        },
+        value(node) {
+          if (noEmitExports) {
+            node.remove();
+          }
+        },
+      },
+      Rule(node) {
+        if (replaceInSelectors) {
+          // eslint-disable-next-line no-param-reassign
+          node.selector = ICSSUtils.replaceValueSymbols(node.selector, definitions);
+        }
+      },
+    };
+  },
+});
 
 
-const plugin = postcss.plugin(PLUGIN, factory);
+const plugin = factory;
+plugin.postcss = true;
+
 module.exports = plugin;
 exports.default = plugin;
 
