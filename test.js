@@ -23,13 +23,17 @@ function run(t, input, output, opts = {}, extraPlugins = []) {
 
 // Simple plugin that replaces "black" with "purple" within @value declarations,
 // used to test preprocess value transformation
-const blackToPurplePlugin = postcss.plugin('testBlackToPurple', () => (root) => {
-  root.walkAtRules('value', (atRule) => {
-    atRule.replaceWith(atRule.clone({
-      params: atRule.params.replace('black', 'purple'),
-    }));
-  });
+const blackToPurplePlugin = () => ({
+  postcssPlugin: 'testBlackToPurple',
+  Once(root) {
+    root.walkAtRules('value', (atRule) => {
+      atRule.replaceWith(atRule.clone({
+        params: atRule.params.replace('black', 'purple'),
+      }));
+    });
+  },
 });
+blackToPurplePlugin.postcss = true;
 
 test('should pass through an empty string', async (t) => {
   await run(t, '', '');
@@ -50,7 +54,7 @@ test('should remove exports if noEmitExports is true', async (t) => {
 test('gives an error when there is no semicolon between lines', async (t) => {
   const input = '@value red blue\n@value green yellow';
   const processor = postcss([plugin]);
-  const result = await processor.process(input);
+  const result = await processor.process(input, { from: undefined });
   const warnings = result.warnings();
 
   t.is(warnings.length, 1);
@@ -433,9 +437,28 @@ test('should replace values within rule selectors', async (t) => {
 test('variables are also present in messages', async (t) => {
   const input = '@value myColor: blue; @value myColor2: myColor';
   const processor = postcss([plugin]);
-  const result = await processor.process(input);
+  const result = await processor.process(input, { from: undefined });
   const { values, type } = result.messages[0];
 
   t.is(type, 'values');
   t.is(values.myColor2, 'blue');
+});
+
+test('tailwind', async (t) => {
+  const tailwind = () => ({
+    postcssPlugin: 'tailwind',
+    Once(root) {
+      root.walkAtRules('tailwind', (atRule) => {
+        atRule.replaceWith(postcss.decl({ prop: '--tw-props', value: ' ' }));
+      });
+    },
+  });
+  tailwind.postcss = true;
+
+  const input = '@tailwind base;';
+  const processor = postcss([tailwind, plugin]);
+  const result = await processor.process(input, { from: undefined });
+
+  t.is(result.css, '--tw-props:  ;');
+  t.is(result.warnings().length, 0);
 });
