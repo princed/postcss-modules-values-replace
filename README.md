@@ -1,9 +1,7 @@
-# PostCSS Modules Values Replace [![Build Status][ci-img]][ci]
+# PostCSS Modules Values Replace
 
 [PostCSS] plugin to work around CSS Modules values limitations.
 
-[ci]: https://travis-ci.org/princed/postcss-modules-values-replace
-[ci-img]:  https://travis-ci.org/princed/postcss-modules-values-replace.svg
 [PostCSS]: https://github.com/postcss/postcss
 [css-loader]: https://github.com/webpack/css-loader
 [postcss-calc]: https://github.com/postcss/postcss-calc
