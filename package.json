@@ -26,18 +26,18 @@
     "postcss-values-parser": "^6.0.2"
   },
   "devDependencies": {
-    "ava": "^0.24.0",
     "eslint": "^4.15.0",
     "eslint-config-airbnb-base": "^12.1.0",
-    "eslint-plugin-import": "^2.5.0"
+    "eslint-plugin-import": "^2.5.0",
+    "vitest": "^0.29.2"
   },
   "peerDependencies": {
     "postcss": "^8.2.9"
   },
   "scripts": {
     "lint": "eslint *.js",
-    "prepublish": "npm test",
-    "test": "npm run lint && ava"
+    "prepublish": "npm run lint && npm test -- --run",
+    "test": "vitest"
   },
   "eslintConfig": {
     "extends": "eslint-config-airbnb-base"

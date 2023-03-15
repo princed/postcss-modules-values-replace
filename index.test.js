@@ -1,10 +1,10 @@
 /* eslint-disable import/no-extraneous-dependencies */
 
-const postcss = require('postcss');
-const test = require('ava');
-const { resolve } = require('path');
+import { resolve } from 'path';
+import postcss from 'postcss';
+import { test } from 'vitest';
 
-const plugin = require('.');
+import plugin from '.';
 
 const parserOpts = {
   from: resolve(__dirname, 'fixtures/from.css'),
@@ -16,8 +16,8 @@ function run(t, input, output, opts = {}, extraPlugins = []) {
     ...extraPlugins,
     plugin(opts),
   ]).process(input, parserOpts).then((result) => {
-    t.is(result.css, output);
-    t.is(result.warnings().length, 0);
+    t.expect(result.css).toBe(output);
+    t.expect(result.warnings().length).toBe(0);
   });
 }
 
@@ -57,20 +57,20 @@ test('gives an error when there is no semicolon between lines', async (t) => {
   const result = await processor.process(input, { from: undefined });
   const warnings = result.warnings();
 
-  t.is(warnings.length, 1);
-  t.is(warnings[0].text, 'Invalid value definition: red blue\n@value green yellow');
+  t.expect(warnings.length).toBe(1);
+  t.expect(warnings[0].text).toBe('Invalid value definition: red blue\n@value green yellow');
 });
 
 test('gives an error when path to imported file is wrong', async (t) => {
   const input = '@value red from "./non-existent-file.css"';
   const processor = postcss([plugin]);
-  await t.throws(processor.process(input, parserOpts));
+  await t.expect(processor.process(input, parserOpts)).rejects.toThrow("Can't resolve './non-existent-file.css'");
 });
 
 test('gives an error when @value statement is invalid', async (t) => {
   const input = '@value , from "./colors.css"';
   const processor = postcss([plugin]);
-  await t.throws(processor.process(input, parserOpts));
+  await t.expect(processor.process(input, parserOpts)).rejects.toThrow('@value statement "" is invalid!');
 });
 
 test('shouldn\'t break on draft spec syntax', async (t) => {
@@ -440,8 +440,8 @@ test('variables are also present in messages', async (t) => {
   const result = await processor.process(input, { from: undefined });
   const { values, type } = result.messages[0];
 
-  t.is(type, 'values');
-  t.is(values.myColor2, 'blue');
+  t.expect(type).toBe('values');
+  t.expect(values.myColor2).toBe('blue');
 });
 
 test('tailwind', async (t) => {
@@ -459,6 +459,6 @@ test('tailwind', async (t) => {
   const processor = postcss([tailwind, plugin]);
   const result = await processor.process(input, { from: undefined });
 
-  t.is(result.css, '--tw-props:  ;');
-  t.is(result.warnings().length, 0);
+  t.expect(result.css).toBe('--tw-props:  ;');
+  t.expect(result.warnings().length).toBe(0);
 });
