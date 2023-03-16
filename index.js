@@ -156,10 +156,10 @@ const factory = ({
 
     return {
       async Once(root) {
-        const resolver = ResolverFactory.createResolver(Object.assign(
-          { fileSystem },
-          resolveOptions,
-        ));
+        const resolver = ResolverFactory.createResolver({
+          fileSystem,
+          ...resolveOptions,
+        });
         const resolve = promisify(resolver.resolve.bind(resolver));
         const readFile = promisify(fileSystem.readFile.bind(fileSystem));
 
@@ -167,7 +167,7 @@ const factory = ({
         if (preprocessValues) {
           const rootPlugins = rootResult.processor.plugins;
           const oursPluginIndex = rootPlugins
-            .findIndex(plugin => plugin.postcssPlugin === PLUGIN);
+            .findIndex((plugin) => plugin.postcssPlugin === PLUGIN);
           preprocessPlugins = rootPlugins.slice(0, oursPluginIndex);
         }
 
@@ -226,10 +226,8 @@ const factory = ({
   },
 });
 
-
 const plugin = factory;
 plugin.postcss = true;
 
 module.exports = plugin;
 exports.default = plugin;
-

@@ -26,9 +26,9 @@
     "postcss-values-parser": "^6.0.2"
   },
   "devDependencies": {
-    "eslint": "^4.15.0",
-    "eslint-config-airbnb-base": "^12.1.0",
-    "eslint-plugin-import": "^2.5.0",
+    "eslint": "^8.36.0",
+    "eslint-config-airbnb-base": "^15.0.0",
+    "eslint-plugin-import": "^2.27.5",
     "vitest": "^0.29.2"
   },
   "peerDependencies": {
