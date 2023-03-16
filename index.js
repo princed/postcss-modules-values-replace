@@ -1,7 +1,7 @@
 const postcss = require('postcss');
 const fs = require('fs');
 const path = require('path');
-const promisify = require('es6-promisify');
+const { promisify } = require('es6-promisify');
 const { CachedInputFileSystem, ResolverFactory } = require('enhanced-resolve');
 const { parse } = require('postcss-values-parser');
 const { urlToRequest } = require('loader-utils');
@@ -160,8 +160,8 @@ const factory = ({
           { fileSystem },
           resolveOptions,
         ));
-        const resolve = promisify(resolver.resolve, resolver);
-        const readFile = promisify(fs.readFile, fs);
+        const resolve = promisify(resolver.resolve.bind(resolver));
+        const readFile = promisify(fileSystem.readFile.bind(fileSystem));
 
         let preprocessPlugins = [];
         if (preprocessValues) {
