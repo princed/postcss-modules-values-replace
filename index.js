@@ -1,7 +1,8 @@
 const postcss = require('postcss');
+const fs = require('fs');
 const path = require('path');
 const promisify = require('es6-promisify');
-const { CachedInputFileSystem, NodeJsInputFileSystem, ResolverFactory } = require('enhanced-resolve');
+const { CachedInputFileSystem, ResolverFactory } = require('enhanced-resolve');
 const { parse } = require('postcss-values-parser');
 const { urlToRequest } = require('loader-utils');
 const ICSSUtils = require('icss-utils');
@@ -15,8 +16,9 @@ const PLUGIN = 'postcss-modules-values-replace';
 const INNER_PLUGIN = 'postcss-modules-values-replace-bind';
 
 // Borrowed from enhanced-resolve
-const nodeFs = new CachedInputFileSystem(new NodeJsInputFileSystem(), 4000);
+const nodeFs = new CachedInputFileSystem(fs, 4000);
 const concordContext = {};
+const resolveContext = {};
 
 const replaceValueSymbols = (valueString, replacements) => {
   const value = parse(valueString, { ignoreUnknownWords: true });
@@ -141,7 +143,7 @@ const walkerPlugin = (fn, ...args) => ({
 walkerPlugin.postcss = true;
 
 const factory = ({
-  fs = nodeFs,
+  fs: fileSystem = nodeFs,
   noEmitExports = false,
   resolve: resolveOptions = {},
   preprocessValues = false,
@@ -155,7 +157,7 @@ const factory = ({
     return {
       async Once(root) {
         const resolver = ResolverFactory.createResolver(Object.assign(
-          { fileSystem: fs },
+          { fileSystem },
           resolveOptions,
         ));
         const resolve = promisify(resolver.resolve, resolver);
@@ -172,7 +174,7 @@ const factory = ({
         const definitionCache = new Map();
         async function walkFile(from, dir, requiredDefinitions) {
           const request = importsAsModuleRequests ? urlToRequest(from) : from;
-          const resolvedFrom = await resolve(concordContext, dir, request);
+          const resolvedFrom = await resolve(concordContext, dir, request, resolveContext);
 
           const cached = definitionCache.get(resolvedFrom);
           if (cached) {
