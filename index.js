@@ -149,6 +149,7 @@ const factory = ({
   preprocessValues = false,
   importsAsModuleRequests = false,
   replaceInSelectors = false,
+  atRules = ['media']
 } = {}) => ({
   postcssPlugin: PLUGIN,
   prepare(rootResult) {
@@ -206,10 +207,13 @@ const factory = ({
         node.value = replaceValueSymbols(node.value, definitions);
       },
       AtRule: {
-        media(node) {
-          // eslint-disable-next-line no-param-reassign
-          node.params = replaceValueSymbols(node.params, definitions);
-        },
+        ...atRules.reduce((acc, atRule) => ({
+          ...acc,
+          [atRule]: (node) => {
+            // eslint-disable-next-line no-param-reassign
+            node.params = replaceValueSymbols(node.params, definitions);
+          },
+        }), {}),
         value(node) {
           if (noEmitExports) {
             node.remove();

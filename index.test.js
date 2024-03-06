@@ -263,11 +263,29 @@ test('should replace inside custom properties', async (t) => {
   );
 });
 
-test('should replace inside media queries', async (t) => {
+test('should replace inside media queries by default, without specifying custom at-rules', async (t) => {
   await run(
     t,
     '@value base: 10px;\n@media (min-width: calc(base * 200)) {}',
     '@value base: 10px;\n@media (min-width: calc(10px * 200)) {}',
+  );
+});
+
+test('should replace inside media queries when it is specified as a custom at-rule', async (t) => {
+  await run(
+    t,
+    '@value base: 10px;\n@media (min-width: calc(base * 200)) {}',
+    '@value base: 10px;\n@media (min-width: calc(10px * 200)) {}',
+    { atRules: ['media'] }
+  );
+});
+
+test('should replace inside media and container queries when they are specified as a custom at-rules', async (t) => {
+  await run(
+    t,
+    '@value base: 10px;\n@media (min-width: calc(base * 200)) {}\n@container (min-width: calc(base * 200)) {}',
+    '@value base: 10px;\n@media (min-width: calc(10px * 200)) {}\n@container (min-width: calc(10px * 200)) {}',
+    { atRules: ['media', 'container'] }
   );
 });
 
