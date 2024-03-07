@@ -276,7 +276,7 @@ test('should replace inside media queries when it is specified as a custom at-ru
     t,
     '@value base: 10px;\n@media (min-width: calc(base * 200)) {}',
     '@value base: 10px;\n@media (min-width: calc(10px * 200)) {}',
-    { atRules: ['media'] }
+    { atRules: ['media'] },
   );
 });
 
@@ -285,7 +285,7 @@ test('should replace inside media and container queries when they are specified 
     t,
     '@value base: 10px;\n@media (min-width: calc(base * 200)) {}\n@container (min-width: calc(base * 200)) {}',
     '@value base: 10px;\n@media (min-width: calc(10px * 200)) {}\n@container (min-width: calc(10px * 200)) {}',
-    { atRules: ['media', 'container'] }
+    { atRules: ['media', 'container'] },
   );
 });
 

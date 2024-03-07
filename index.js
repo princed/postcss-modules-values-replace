@@ -149,7 +149,7 @@ const factory = ({
   preprocessValues = false,
   importsAsModuleRequests = false,
   replaceInSelectors = false,
-  atRules = ['media']
+  atRules = ['media'],
 } = {}) => ({
   postcssPlugin: PLUGIN,
   prepare(rootResult) {
