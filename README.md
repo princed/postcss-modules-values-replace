@@ -121,6 +121,28 @@ If your code is written with pre-2.0 import syntax, and utilises [postcss-module
 
 When enabled, value usage within rule selectors will also be replaced by this plugin.
 
+#### atRules `Array<string>`
+
+You can pass a list of at-rules in which `@value`'s should be replaced. Only `@media` rules will be processed by default.
+Note that passed array isn't merged with default `['media']` but overwrites it, so you'll need to include all the rules you want to be processed.
+
+```js
+postcss([
+  require('postcss-modules-values-replace')({ atRules: ['media', 'container']  })
+]);
+```
+**Input:**
+```css
+@value $tables from './breakpoints.css';
+
+@container (width >= $tablet) {}
+```
+
+**Output:**
+```css
+@container (width >= 768px) {}
+```
+
 ### calc() and @value
 
 To enable calculations *inside* **@value**, enable media queries support in [postcss-calc]:
