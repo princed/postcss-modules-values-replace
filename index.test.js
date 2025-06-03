@@ -255,6 +255,16 @@ test('should allow transitive values within calc without spaces', async (t) => {
   );
 });
 
+test('should allow transitive values containing spaces, like CSS relative colors', async (t) => {
+  await run(
+    t,
+    '@value mixedColor: color-mix(in hsl, hsl(200 50 80), coral 80%);\n'
+    + '@value mixedColorA90: hsl(from mixedColor h s l / 90%);',
+    '@value mixedColor: color-mix(in hsl, hsl(200 50 80), coral 80%);\n'
+    + '@value mixedColorA90: hsl(from color-mix(in hsl, hsl(200 50 80), coral 80%) h s l / 90%);',
+  );
+});
+
 test('should replace inside custom properties', async (t) => {
   await run(
     t,
@@ -300,10 +310,10 @@ test('should allow custom-property-style names', async (t) => {
 test('should allow all colour types', async (t) => {
   await run(
     t,
-    '@value named: red; @value hex3char #0f0; @value hex6char #00ff00; @value rgba rgba(34, 12, 64, 0.3); @value hsla hsla(220, 13.0%, 18.0%, 1);\n'
-    + '.foo { color: named; background-color: hex3char; border-top-color: hex6char; border-bottom-color: rgba; outline-color: hsla; }',
-    '@value named: red; @value hex3char #0f0; @value hex6char #00ff00; @value rgba rgba(34, 12, 64, 0.3); @value hsla hsla(220, 13.0%, 18.0%, 1);\n'
-    + '.foo { color: red; background-color: #0f0; border-top-color: #00ff00; border-bottom-color: rgba(34, 12, 64, 0.3); outline-color: hsla(220, 13.0%, 18.0%, 1); }',
+    '@value named: red; @value hex3char #0f0; @value hex6char #00ff00; @value rgba rgba(34, 12, 64, 0.3); @value hsla hsla(220, 13.0%, 18.0%, 1); @value hsl hsl(264 100% 62% / 70%);\n'
+    + '.foo { color: named; background-color: hex3char; border-top-color: hex6char; border-bottom-color: rgba; outline-color: hsla; border-left-color: hsl; }',
+    '@value named: red; @value hex3char #0f0; @value hex6char #00ff00; @value rgba rgba(34, 12, 64, 0.3); @value hsla hsla(220, 13.0%, 18.0%, 1); @value hsl hsl(264 100% 62% / 70%);\n'
+    + '.foo { color: red; background-color: #0f0; border-top-color: #00ff00; border-bottom-color: rgba(34, 12, 64, 0.3); outline-color: hsla(220, 13.0%, 18.0%, 1); border-left-color: hsl(264 100% 62% / 70%); }',
   );
 });
 
