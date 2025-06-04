@@ -40,7 +40,7 @@ const replaceValueSymbols = (valueString, replacements) => {
 const getDefinition = (atRule, existingDefinitions, requiredDefinitions) => {
   const matches = matchValueDefinition.exec(atRule.params);
   if (!matches) {
-    throw atRule.error('Invalid @value definition');
+    return null;
   }
 
   const [/* match */, name, middle, value, end] = matches;
@@ -115,6 +115,9 @@ const walk = async (requiredDefinitions, walkFile, root, result) => {
     }
 
     const newDefinitions = getDefinition(atRule, existingDefinitions, requiredDefinitions);
+    if (!newDefinitions) {
+      result.warn(`Invalid value definition: ${atRule.params}`);
+    }
     return Object.assign(existingDefinitions, newDefinitions);
   };
 
