@@ -38,7 +38,12 @@ const replaceValueSymbols = (valueString, replacements) => {
 };
 
 const getDefinition = (atRule, existingDefinitions, requiredDefinitions) => {
-  const [/* match */, name, middle, value, end] = matchValueDefinition.exec(atRule.params);
+  const matches = matchValueDefinition.exec(atRule.params);
+  if (!matches) {
+    throw atRule.error('Invalid @value definition');
+  }
+
+  const [/* match */, name, middle, value, end] = matches;
   const valueWithReplacements = replaceValueSymbols(value, existingDefinitions);
 
   if (!requiredDefinitions) {

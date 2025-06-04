@@ -67,10 +67,16 @@ test('gives an error when path to imported file is wrong', async (t) => {
   await t.expect(processor.process(input, parserOpts)).rejects.toThrow("Can't resolve './non-existent-file.css'");
 });
 
-test('gives an error when @value statement is invalid', async (t) => {
+test('gives an error when @value import statement is invalid', async (t) => {
   const input = '@value , from "./colors.css"';
   const processor = postcss([plugin]);
   await t.expect(processor.process(input, parserOpts)).rejects.toThrow('@value statement "" is invalid!');
+});
+
+test('gives an error when @value declaration is invalid', async (t) => {
+  const input = '@value oops;';
+  const processor = postcss([plugin]);
+  await t.expect(processor.process(input, parserOpts)).rejects.toThrow('Invalid @value definition');
 });
 
 test('shouldn\'t break on draft spec syntax', async (t) => {
