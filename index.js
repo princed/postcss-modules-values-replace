@@ -8,7 +8,7 @@ const { urlToRequest } = require('loader-utils');
 const ICSSUtils = require('icss-utils');
 
 const matchImports = /^(.+?|\([\s\S]+?\))\s+from\s+("[^"]*"|'[^']*'|[\w-]+)$/;
-const matchValueDefinition = /(?:\s+|^)([\w-]+)(:?\s+)(.+?)(\s*)$/g;
+const matchValueDefinition = /(?:\s+|^)([\w-]+)(:?\s+)(.+?)(\s*)$/;
 const matchImport = /^([\w-]+)(?:\s+as\s+([\w-]+))?/;
 const matchPath = /"[^"]*"|'[^']*'/;
 
@@ -38,22 +38,15 @@ const replaceValueSymbols = (valueString, replacements) => {
 };
 
 const getDefinition = (atRule, existingDefinitions, requiredDefinitions) => {
-  let matches;
-  const definition = {};
+  const [/* match */, name, middle, value, end] = matchValueDefinition.exec(atRule.params);
+  const valueWithReplacements = replaceValueSymbols(value, existingDefinitions);
 
-  // eslint-disable-next-line no-cond-assign
-  while (matches = matchValueDefinition.exec(atRule.params)) {
-    const [/* match */, requiredName, middle, value, end] = matches;
-    // Add to the definitions, knowing that values can refer to each other
-    definition[requiredName] = replaceValueSymbols(value, existingDefinitions);
-
-    if (!requiredDefinitions) {
-      // eslint-disable-next-line no-param-reassign
-      atRule.params = requiredName + middle + definition[requiredName] + end;
-    }
+  if (!requiredDefinitions) {
+    // eslint-disable-next-line no-param-reassign
+    atRule.params = name + middle + valueWithReplacements + end;
   }
 
-  return definition;
+  return { [name]: valueWithReplacements };
 };
 
 const getImports = (aliases) => {
