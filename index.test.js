@@ -51,7 +51,7 @@ test('should remove exports if noEmitExports is true', async (t) => {
   await run(t, '@value red blue;', '', { noEmitExports: true });
 });
 
-test('gives an error when there is no semicolon between lines', async (t) => {
+test('gives a warning when there is no semicolon between lines', async (t) => {
   const input = '@value red blue\n@value green yellow';
   const processor = postcss([plugin]);
   const result = await processor.process(input, { from: undefined });
@@ -61,13 +61,23 @@ test('gives an error when there is no semicolon between lines', async (t) => {
   t.expect(warnings[0].text).toBe('Invalid value definition: red blue\n@value green yellow');
 });
 
+test('gives a warning when @value definition is invalid', async (t) => {
+  const input = '@value oops:;';
+  const processor = postcss([plugin]);
+  const result = await processor.process(input, { from: undefined });
+  const warnings = result.warnings();
+
+  t.expect(warnings.length).toBe(1);
+  t.expect(warnings[0].text).toBe('Invalid value definition: oops:');
+});
+
 test('gives an error when path to imported file is wrong', async (t) => {
   const input = '@value red from "./non-existent-file.css"';
   const processor = postcss([plugin]);
   await t.expect(processor.process(input, parserOpts)).rejects.toThrow("Can't resolve './non-existent-file.css'");
 });
 
-test('gives an error when @value statement is invalid', async (t) => {
+test('gives an error when @value import statement is invalid', async (t) => {
   const input = '@value , from "./colors.css"';
   const processor = postcss([plugin]);
   await t.expect(processor.process(input, parserOpts)).rejects.toThrow('@value statement "" is invalid!');
