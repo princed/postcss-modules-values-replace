@@ -23,7 +23,7 @@
     "es6-promisify": "^7.0.0",
     "icss-utils": "^5.1.0",
     "loader-utils": "^3.2.1",
-    "postcss-values-parser": "^6.0.2"
+    "postcss-values-parser": "^7.0.0"
   },
   "devDependencies": {
     "eslint": "^8.36.0",
